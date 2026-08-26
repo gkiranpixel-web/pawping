@@ -1,4 +1,9 @@
-# pawping
-Ping when someone scans the QR Code
-                                                      PawPing
-                                             My cat tracking project
+# PawPing ready-to-deploy starter
+
+Upload the contents of this ZIP to the ROOT of your GitHub repository. Do not upload the enclosing pawping-ready folder.
+
+Required Vercel variables:
+- NEXT_PUBLIC_SUPABASE_URL
+- NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+Never use the Supabase service_role or secret key in Vercel NEXT_PUBLIC variables or GitHub.
