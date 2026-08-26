@@ -9,104 +9,87 @@ const supabase = url && key ? createClient(url, key) : null;
 export default function Home() {
   const [state, setState] = useState("idle");
   const [message, setMessage] = useState(
-    "I found this cat and it is safe."
+    "I found Luna and she is safe."
   );
   const [result, setResult] = useState("");
 
-  async function report() {
-  if (!supabase) {
-    setResult(
-      "Setup missing: NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY is missing."
-    );
-    return;
-  }
+  function report() {
+    if (!supabase) {
+      setResult(
+        "Setup missing: check the Supabase environment variables in Vercel."
+      );
+      return;
+    }
 
-  if (!navigator.geolocation) {
-    setResult("Location is not supported by this browser.");
-    return;
-  }
+    if (!navigator.geolocation) {
+      setResult("Location is not supported by this browser.");
+      return;
+    }
 
-  setState("loading");
-  setResult("Requesting location permission...");
+    setState("loading");
+    setResult("Requesting location permission...");
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
-        const { data: cats, error: catError } = await supabase
-        .from("cats")
-        .select("*");
+        try {
+          const { data: cat, error: catError } = await supabase
+            .from("cats")
+            .select("id, name")
+            .eq("public_token", "luna123")
+            .single();
 
-        alert(JSON.stringify(cats));
-        console.log(cats);
+          if (catError) {
+            setResult(
+              `Cat lookup failed: ${catError.message}`
+            );
+            setState("idle");
+            return;
+          }
 
-        setState("idle");
-        return;
+          const reportData = {
+            cat_id: cat.id,
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            accuracy_m: position.coords.accuracy,
+            message: message.trim()
+          };
 
-        if (catError) {
+          const { error: insertError } = await supabase
+            .from("finder_reports")
+            .insert(reportData);
+
+          if (insertError) {
+            setResult(
+              `Report could not be saved: ${insertError.message}`
+            );
+            setState("idle");
+            return;
+          }
+
+          setResult(
+            `Thank you! ${cat.name}'s location was saved successfully.`
+          );
           setState("idle");
+        } catch (error) {
           setResult(
-            `Cat query failed: ${catError.message} | Code: ${
-              catError.code || "unknown"
-            }`
+            `Unexpected error: ${error.message || "Unknown error"}`
           );
-          return;
-        }
-
-        if (!cats || cats.length === 0) {
           setState("idle");
-          setResult(
-            `Connected to Supabase, but luna123 is not visible. Supabase URL: ${url}`
-          );
-          return;
         }
-
-        const cat = cats[0];
-
-        const reportData = {
-          cat_id: cat.id,
-          latitude: Number(position.coords.latitude),
-          longitude: Number(position.coords.longitude),
-          accuracy_m: Number(position.coords.accuracy),
-          message: message.trim()
-        };
-
-        const { data: insertedReport, error: insertError } = await supabase
-          .from("finder_reports")
-          .insert(reportData)
-          .select("id, created_at")
-          .single();
-
-        setState("idle");
-
-        if (insertError) {
-          setResult(
-            `Report insert failed: ${insertError.message} | Code: ${
-              insertError.code || "unknown"
-            }`
-          );
-          return;
-        }
-
+      },
+      (error) => {
         setResult(
-          `Thank you! Luna's location was saved. Report ID: ${insertedReport.id}`
+          `Location was not shared: ${error.message}`
         );
-      } catch (error) {
         setState("idle");
-        setResult(`Unexpected error: ${error.message}`);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0
       }
-    },
-    (error) => {
-      setState("idle");
-      setResult(
-        `Location was not shared: ${error.message} | Code: ${error.code}`
-      );
-    },
-    {
-      enableHighAccuracy: true,
-      timeout: 15000,
-      maximumAge: 0
-    }
-  );
-}
+    );
+  }
 
   return (
     <main>
@@ -121,8 +104,8 @@ export default function Home() {
         <h1>Luna</h1>
 
         <p className="lead">
-          Friendly cat, but may be frightened. Please keep Luna somewhere
-          safe.
+          Friendly cat, but may be frightened. Please keep Luna
+          somewhere safe.
         </p>
 
         <div className="facts">
@@ -137,10 +120,12 @@ export default function Home() {
           </div>
         </div>
 
-        <label>Message to owner</label>
+        <label htmlFor="message">Message to owner</label>
 
         <textarea
+          id="message"
           value={message}
+          maxLength={500}
           onChange={(event) => setMessage(event.target.value)}
         />
 
@@ -153,7 +138,11 @@ export default function Home() {
             : "📍 I found this cat"}
         </button>
 
-        {result && <p className="result">{result}</p>}
+        {result && (
+          <p className="result" role="status">
+            {result}
+          </p>
+        )}
 
         <p className="privacy">
           Your location is shared only after browser permission.
@@ -163,6 +152,7 @@ export default function Home() {
       <style jsx>{`
         main {
           min-height: 100vh;
+          box-sizing: border-box;
           background: #f4f7f2;
           font-family: Arial, sans-serif;
           padding: 24px;
@@ -288,6 +278,7 @@ export default function Home() {
           background: #ecfdf5;
           color: #065f46;
           line-height: 1.4;
+          overflow-wrap: anywhere;
         }
 
         .privacy {
