@@ -14,20 +14,20 @@ export default function Home() {
   const [result, setResult] = useState("");
 
   async function report() {
-    if (!supabase) {
-      setResult(
-        "Setup missing: add Supabase environment variables in Vercel."
-      );
-      return;
-    }
+  if (!supabase) {
+    setResult(
+      "Setup missing: NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY is missing."
+    );
+    return;
+  }
 
-    if (!navigator.geolocation) {
-      setResult("Location is not supported by this browser.");
-      return;
-    }
+  if (!navigator.geolocation) {
+    setResult("Location is not supported by this browser.");
+    return;
+  }
 
-    setState("loading");
-    setResult("Requesting location permission...");
+  setState("loading");
+  setResult("Requesting location permission...");
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
@@ -44,38 +44,69 @@ export default function Home() {
         if (catError) {
           setState("idle");
           setResult(
-            "Cat not found. Check public_token luna123 and Supabase RLS."
+            `Cat query failed: ${catError.message} | Code: ${
+              catError.code || "unknown"
+            }`
           );
           return;
         }
 
-        const { error } = await supabase
+        if (!cats || cats.length === 0) {
+          setState("idle");
+          setResult(
+            `Connected to Supabase, but luna123 is not visible. Supabase URL: ${url}`
+          );
+          return;
+        }
+
+        const cat = cats[0];
+
+        const reportData = {
+          cat_id: cat.id,
+          latitude: Number(position.coords.latitude),
+          longitude: Number(position.coords.longitude),
+          accuracy_m: Number(position.coords.accuracy),
+          message: message.trim()
+        };
+
+        const { data: insertedReport, error: insertError } = await supabase
           .from("finder_reports")
-          .insert({
-            cat_id: cat.id,
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-            message: message
-          });
+          .insert(reportData)
+          .select("id, created_at")
+          .single();
 
         setState("idle");
+
+        if (insertError) {
+          setResult(
+            `Report insert failed: ${insertError.message} | Code: ${
+              insertError.code || "unknown"
+            }`
+          );
+          return;
+        }
 
         setResult(
-          error
-            ? `Could not send: ${error.message}`
-            : "Thank you! The location report was saved."
+          `Thank you! Luna's location was saved. Report ID: ${insertedReport.id}`
         );
-      },
-      (error) => {
+      } catch (error) {
         setState("idle");
-        setResult(`Location not shared: ${error.message}`);
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000
+        setResult(`Unexpected error: ${error.message}`);
       }
-    );
-  }
+    },
+    (error) => {
+      setState("idle");
+      setResult(
+        `Location was not shared: ${error.message} | Code: ${error.code}`
+      );
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 0
+    }
+  );
+}
 
   return (
     <main>
