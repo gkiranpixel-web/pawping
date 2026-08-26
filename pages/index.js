@@ -31,11 +31,15 @@ export default function Home() {
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
-        const { data: cat, error: catError } = await supabase
-          .from("cats")
-          .select("id")
-          .eq("public_token", "luna123")
-          .single();
+        const { data: cats, error: catError } = await supabase
+        .from("cats")
+        .select("*");
+
+        alert(JSON.stringify(cats));
+        console.log(cats);
+
+        setState("idle");
+        return;
 
         if (catError) {
           setState("idle");
