@@ -1,6 +1,5 @@
 {
   "name": "pawping",
-  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -9,8 +8,8 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.0",
-    "next": "^15.0.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "next": "^15.5.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
   }
 }
