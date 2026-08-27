@@ -1,16 +1,108 @@
-import {useEffect,useMemo,useState} from "react";import QRCode from "qrcode";import {supabase,isConfigured} from "../lib/supabase";import Link from "next/link";
-const empty={name:"",age:"",color:"",temperament:"",health_note:"",status:"safe"};
-export default function Owner(){const [session,setSession]=useState(null),[email,setEmail]=useState(""),[sent,setSent]=useState(false),[cats,setCats]=useState([]),[reports,setReports]=useState([]),[form,setForm]=useState(empty),[photo,setPhoto]=useState(null),[msg,setMsg]=useState(""),[busy,setBusy]=useState(false),[mapReport,setMapReport]=useState(null);
-useEffect(()=>{if(!supabase)return;supabase.auth.getSession().then(({data})=>setSession(data.session));const {data:l}=supabase.auth.onAuthStateChange((_e,s)=>setSession(s));return()=>l.subscription.unsubscribe()},[]);
-useEffect(()=>{if(session)load()},[session]);
-async function load(){const {data:c,error}=await supabase.from("cats").select("*").order("created_at",{ascending:false});if(error){setMsg(error.message);return}setCats(c||[]);const {data:r,error:re}=await supabase.from("finder_reports").select("id,cat_id,latitude,longitude,accuracy_m,message,created_at,cats(name)").order("created_at",{ascending:false});setReports(r||[]);if(re)setMsg(re.message);if(r?.length)setMapReport(r[0])}
-const stats=useMemo(()=>({pets:cats.length,missing:cats.filter(c=>c.status==="missing").length,safe:cats.filter(c=>c.status==="safe").length,reports:reports.length}),[cats,reports]);
-async function login(e){e.preventDefault();const {error}=await supabase.auth.signInWithOtp({email,options:{emailRedirectTo:window.location.origin+"/owner"}});setMsg(error?error.message:"");if(!error)setSent(true)}
-async function save(e){e.preventDefault();setBusy(true);setMsg("");let photo_url=null;try{if(photo){const ext=photo.name.split(".").pop().toLowerCase();const path=`${session.user.id}/${crypto.randomUUID()}.${ext}`;const {error:u}=await supabase.storage.from("pet-photos").upload(path,photo,{upsert:false});if(u)throw u;photo_url=supabase.storage.from("pet-photos").getPublicUrl(path).data.publicUrl}const payload={...form,photo_url,owner_id:session.user.id,public_token:crypto.randomUUID().replaceAll("-","").slice(0,20)};const {error}=await supabase.from("cats").insert(payload);if(error)throw error;setForm(empty);setPhoto(null);setMsg("Pet created successfully.");await load()}catch(e){setMsg(e.message)}finally{setBusy(false)}}
-async function updateStatus(c){const {error}=await supabase.from("cats").update({status:c.status==="missing"?"safe":"missing"}).eq("id",c.id);setMsg(error?error.message:"Status updated.");if(!error)load()}
-async function remove(c){if(!confirm(`Delete ${c.name}?`))return;const {error}=await supabase.from("cats").delete().eq("id",c.id);setMsg(error?error.message:"Pet deleted.");if(!error)load()}
-async function qr(c){const link=`${window.location.origin}/c/${c.public_token}`;const data=await QRCode.toDataURL(link,{width:1000,margin:2,color:{dark:"#14251e",light:"#ffffff"}});const a=document.createElement("a");a.href=data;a.download=`pawping-${c.name.toLowerCase().replace(/[^a-z0-9]+/g,"-")}-qr.png`;a.click()}
-if(!isConfigured)return <main className="shell"><section className="panel"><h1>Setup missing</h1><p>Add the Supabase environment variables in Vercel.</p></section></main>;
-if(!session)return <main className="shell"><section className="panel auth"><div className="logo">🐾</div><p className="eyebrow">PAWPING V2</p><h1>Owner sign in</h1><p className="muted">Receive a secure magic link by email.</p><form onSubmit={login}><label>Email</label><input type="email" value={email} onChange={e=>setEmail(e.target.value)} required/><button>Send magic link</button></form>{sent&&<p className="result">Check your email and open the sign-in link.</p>}{msg&&<p className="error">{msg}</p>}</section></main>;
-return <main className="wide"><header><div><p className="eyebrow">OWNER DASHBOARD</p><h1>PawPing V7</h1></div><div className="row"><Link className="secondary linkbutton" href="/advanced">Tracking & alerts</Link><button className="secondary fit" onClick={()=>supabase.auth.signOut()}>Sign out</button></div></header>{msg&&<p className="result">{msg}</p>}<section className="stats"><Stat n={stats.pets} t="Pets"/><Stat n={stats.reports} t="Reports"/><Stat n={stats.missing} t="Missing" danger/><Stat n={stats.safe} t="Safe"/></section><div className="dashboard"><section><div className="sectionTitle"><h2>My pets</h2><span>{cats.length}</span></div><div className="cards">{cats.map(c=>{const link=typeof window!=="undefined"?`${window.location.origin}/c/${c.public_token}`:"";return <article className="petCard" key={c.id}><div className="petTop"><div className="avatar">{c.photo_url?<img src={c.photo_url} alt=""/>:"🐈"}</div><div><h3>{c.name}</h3><span className={`pill ${c.status}`}>{c.status}</span></div></div><p className="muted">{c.color||"No color"} · {c.age||"No age"}</p><div className="qrbox"><small>PUBLIC QR LINK</small><code>{link}</code></div><div className="row"><button className="primary small" onClick={()=>qr(c)}>Download QR</button><button className="secondary small" onClick={()=>navigator.clipboard.writeText(link)}>Copy link</button></div><div className="row"><a className="secondary small linkbutton" href={link} target="_blank">Open profile</a><button className="secondary small" onClick={()=>updateStatus(c)}>Mark {c.status==="missing"?"safe":"missing"}</button></div><button className="danger small full" onClick={()=>remove(c)}>Delete</button></article>})}{!cats.length&&<div className="empty">No pets yet.</div>}</div></section><aside><section className="panel compact"><h2>Add a pet</h2><form onSubmit={save}>{[["name","Name *"],["age","Age"],["color","Color"],["temperament","Temperament"],["health_note","Health note"]].map(([k,l])=><div key={k}><label>{l}</label><input value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})} required={k==="name"}/></div>)}<label>Photo</label><input type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>setPhoto(e.target.files?.[0]||null)}/><label>Status</label><select value={form.status} onChange={e=>setForm({...form,status:e.target.value})}><option value="safe">Safe</option><option value="missing">Missing</option></select><button disabled={busy}>{busy?"Creating...":"Create pet and QR"}</button></form></section></aside></div><section className="reports"><div className="sectionTitle"><h2>Finder reports</h2><span>{reports.length}</span></div>{mapReport&&<div className="mapCard"><div><b>Latest selected location: {mapReport.cats?.name||"Pet"}</b><p className="muted">{mapReport.message||"No message"}</p></div><iframe title="Reported location" loading="lazy" src={`https://www.openstreetmap.org/export/embed.html?bbox=${mapReport.longitude-0.008}%2C${mapReport.latitude-0.005}%2C${mapReport.longitude+0.008}%2C${mapReport.latitude+0.005}&layer=mapnik&marker=${mapReport.latitude}%2C${mapReport.longitude}`}/></div>}<div className="tableWrap"><table><thead><tr><th>Pet</th><th>Message</th><th>Time</th><th>Accuracy</th><th>Action</th></tr></thead><tbody>{reports.map(r=><tr key={r.id}><td>{r.cats?.name||"Pet"}</td><td>{r.message||"—"}</td><td>{new Date(r.created_at).toLocaleString()}</td><td>{r.accuracy_m?`${Math.round(r.accuracy_m)} m`:"—"}</td><td><button className="secondary tiny" onClick={()=>setMapReport(r)}>Show map</button></td></tr>)}</tbody></table>{!reports.length&&<div className="empty">No reports yet.</div>}</div></section></main>}
-function Stat({n,t,danger}) {return <div className={`stat ${danger?"statDanger":""}`}><strong>{n}</strong><span>{t}</span></div>}
+import { useEffect, useMemo, useState } from "react";
+import QRCode from "qrcode";
+import { supabase, isConfigured } from "../lib/supabase";
+
+const emptyPet = { name: "", age: "", color: "", temperament: "", health_note: "", status: "safe" };
+
+export default function Owner() {
+  const [session, setSession] = useState(null);
+  const [email, setEmail] = useState("");
+  const [cats, setCats] = useState([]);
+  const [reports, setReports] = useState([]);
+  const [alerts, setAlerts] = useState([]);
+  const [devices, setDevices] = useState([]);
+  const [form, setForm] = useState(emptyPet);
+  const [photo, setPhoto] = useState(null);
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [tab, setTab] = useState("pets");
+  const [selected, setSelected] = useState(null);
+
+  useEffect(() => {
+    if (!supabase) return;
+    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, next) => setSession(next));
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => { if (session) loadData(); }, [session]);
+
+  async function loadData() {
+    const [catResult, reportResult, alertResult, deviceResult] = await Promise.all([
+      supabase.from("cats").select("*").order("created_at", { ascending: false }),
+      supabase.from("finder_reports").select("id,cat_id,latitude,longitude,accuracy_m,message,created_at,cats(name)").order("created_at", { ascending: false }),
+      supabase.from("owner_alerts").select("*,cats(name)").order("created_at", { ascending: false }),
+      supabase.from("tracker_devices").select("*,cats(name)").order("created_at", { ascending: false })
+    ]);
+    const failed = [catResult, reportResult, alertResult, deviceResult].find((item) => item.error);
+    if (failed) setMessage(failed.error.message);
+    setCats(catResult.data || []); setReports(reportResult.data || []); setAlerts(alertResult.data || []); setDevices(deviceResult.data || []);
+    setSelected((current) => current || reportResult.data?.[0] || null);
+  }
+
+  const stats = useMemo(() => ({ pets: cats.length, reports: reports.length, missing: cats.filter((cat) => cat.status === "missing").length, unread: alerts.filter((alert) => !alert.read_at).length }), [cats, reports, alerts]);
+
+  async function login(event) {
+    event.preventDefault();
+    const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: `${window.location.origin}/owner` } });
+    setMessage(error ? error.message : "Check your email for the sign-in link.");
+  }
+
+  async function createPet(event) {
+    event.preventDefault(); setBusy(true); setMessage("");
+    try {
+      let photo_url = null;
+      if (photo) {
+        const extension = photo.name.split(".").pop().toLowerCase();
+        const path = `${session.user.id}/${crypto.randomUUID()}.${extension}`;
+        const { error } = await supabase.storage.from("pet-photos").upload(path, photo);
+        if (error) throw error;
+        photo_url = supabase.storage.from("pet-photos").getPublicUrl(path).data.publicUrl;
+      }
+      const { error } = await supabase.from("cats").insert({ ...form, photo_url, owner_id: session.user.id, public_token: crypto.randomUUID().replaceAll("-", "").slice(0, 20) });
+      if (error) throw error;
+      setForm(emptyPet); setPhoto(null); setMessage("Pet created successfully."); await loadData();
+    } catch (error) { setMessage(error.message); } finally { setBusy(false); }
+  }
+
+  async function toggleStatus(cat) {
+    const { error } = await supabase.from("cats").update({ status: cat.status === "missing" ? "safe" : "missing" }).eq("id", cat.id);
+    setMessage(error ? error.message : "Status updated."); if (!error) loadData();
+  }
+
+  async function downloadQr(cat) {
+    const link = `${window.location.origin}/c/${cat.public_token}`;
+    const image = await QRCode.toDataURL(link, { width: 1000, margin: 2, color: { dark: "#14251e", light: "#ffffff" } });
+    const anchor = document.createElement("a"); anchor.href = image; anchor.download = `pawping-${cat.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-qr.png`; anchor.click();
+  }
+
+  async function createDevice(cat) {
+    const { data, error } = await supabase.rpc("create_tracker_device", { p_cat_id: cat.id, p_name: `${cat.name} GPS` });
+    setMessage(error ? error.message : `Copy this device token now. It is shown once: ${data}`); if (!error) loadData();
+  }
+
+  async function markRead(alert) { await supabase.from("owner_alerts").update({ read_at: new Date().toISOString() }).eq("id", alert.id); loadData(); }
+
+  function exportCsv() {
+    const rows = [["pet", "latitude", "longitude", "accuracy_m", "message", "created_at"], ...reports.map((r) => [r.cats?.name || "", r.latitude, r.longitude, r.accuracy_m || "", r.message || "", r.created_at])];
+    const csv = rows.map((row) => row.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(",")).join(String.fromCharCode(10));
+    const anchor = document.createElement("a"); anchor.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); anchor.download = "pawping-finder-reports.csv"; anchor.click(); URL.revokeObjectURL(anchor.href);
+  }
+
+  if (!isConfigured) return <main className="shell"><section className="panel"><h1>Setup missing</h1></section></main>;
+  if (!session) return <main className="shell"><section className="panel auth"><div className="logo">🐾</div><p className="eyebrow">PAWPING V6</p><h1>Owner sign in</h1><form onSubmit={login}><label>Email</label><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required/><button>Send magic link</button></form>{message && <p className="result">{message}</p>}</section></main>;
+
+  const mapUrl = selected ? `https://www.openstreetmap.org/export/embed.html?bbox=${selected.longitude - 0.008}%2C${selected.latitude - 0.005}%2C${selected.longitude + 0.008}%2C${selected.latitude + 0.005}&layer=mapnik&marker=${selected.latitude}%2C${selected.longitude}` : "";
+
+  return <main className="wide"><header><div><p className="eyebrow">OWNER DASHBOARD</p><h1>PawPing V6</h1></div><button className="secondary fit" onClick={() => supabase.auth.signOut()}>Sign out</button></header>{message && <p className="result wrap">{message}</p>}<section className="stats"><Stat value={stats.pets} label="Pets"/><Stat value={stats.reports} label="Reports"/><Stat value={stats.missing} label="Missing"/><Stat value={stats.unread} label="Unread alerts"/></section><nav>{["pets", "locations", "alerts", "devices"].map((name) => <button key={name} className={tab === name ? "" : "secondary"} onClick={() => setTab(name)}>{name}</button>)}</nav>
+
+  {tab === "pets" && <div className="dashboard"><section><div className="cards">{cats.map((cat) => { const link = `${window.location.origin}/c/${cat.public_token}`; return <article className="petCard" key={cat.id}><div className="petTop"><div className="avatar">{cat.photo_url ? <img src={cat.photo_url} alt=""/> : "🐈"}</div><div><h3>{cat.name}</h3><span className={`pill ${cat.status}`}>{cat.status}</span></div></div><p className="muted">{cat.color || "No color"} · {cat.age || "No age"}</p><div className="row"><button className="small" onClick={() => downloadQr(cat)}>Download QR</button><button className="secondary small" onClick={() => navigator.clipboard.writeText(link)}>Copy link</button></div><div className="row"><a className="secondary small linkbutton" target="_blank" href={link}>Open profile</a><button className="secondary small" onClick={() => toggleStatus(cat)}>Mark {cat.status === "missing" ? "safe" : "missing"}</button></div><button className="secondary full" onClick={() => createDevice(cat)}>Create GPS device token</button></article>; })}</div></section><aside><section className="panel compact"><h2>Add a pet</h2><form onSubmit={createPet}>{[["name","Name *"],["age","Age"],["color","Color"],["temperament","Temperament"],["health_note","Health note"]].map(([key,label]) => <div key={key}><label>{label}</label><input value={form[key]} onChange={(e) => setForm({ ...form, [key]: e.target.value })} required={key === "name"}/></div>)}<label>Photo</label><input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => setPhoto(e.target.files?.[0] || null)}/><label>Status</label><select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}><option value="safe">Safe</option><option value="missing">Missing</option></select><button disabled={busy}>{busy ? "Creating..." : "Create pet"}</button></form></section></aside></div>}
+
+  {tab === "locations" && <section><div className="sectionTitle"><h2>Finder locations</h2><button className="secondary fit" onClick={exportCsv}>Export CSV</button></div>{selected && <iframe className="bigmap" title="Selected finder location" src={mapUrl}/>}<div className="tableWrap"><table><thead><tr><th>Pet</th><th>Time</th><th>Accuracy</th><th></th></tr></thead><tbody>{reports.map((report) => <tr key={report.id}><td>{report.cats?.name}</td><td>{new Date(report.created_at).toLocaleString()}</td><td>{report.accuracy_m ? `${Math.round(report.accuracy_m)} m` : "-"}</td><td><button className="secondary tiny" onClick={() => setSelected(report)}>Map</button></td></tr>)}</tbody></table></div></section>}
+
+  {tab === "alerts" && <section><h2>Alert center</h2><div className="cards one">{alerts.map((alert) => <article className={`petCard ${alert.read_at ? "" : "unread"}`} key={alert.id}><b>{alert.title}</b><p>{alert.body}</p><small>{new Date(alert.created_at).toLocaleString()}</small>{!alert.read_at && <button className="secondary full" onClick={() => markRead(alert)}>Mark read</button>}</article>)}</div></section>}
+
+  {tab === "devices" && <section><h2>GPS-ready devices</h2><p className="muted">Tokens are displayed once. Keep them private until physical GPS hardware is connected.</p><div className="cards">{devices.map((device) => <article className="petCard" key={device.id}><h3>{device.name}</h3><p>{device.cats?.name}</p><span className={`pill ${device.is_active ? "safe" : "missing"}`}>{device.is_active ? "active" : "inactive"}</span><p className="muted">Last seen: {device.last_seen_at ? new Date(device.last_seen_at).toLocaleString() : "Never"}</p><p className="muted">Battery: {device.battery_percent ?? "-"}%</p></article>)}</div></section>}</main>;
+}
+
+function Stat({ value, label }) { return <div className="stat"><strong>{value}</strong><span>{label}</span></div>; }
