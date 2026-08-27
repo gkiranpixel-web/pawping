@@ -1,0 +1,2 @@
+import {Html,Head,Main,NextScript} from "next/document";
+export default function Document(){return <Html lang="en"><Head><meta name="theme-color" content="#087a55"/><link rel="manifest" href="/manifest.json"/><link rel="icon" href="/icon.svg"/></Head><body><Main/><NextScript/><script dangerouslySetInnerHTML={{__html:`if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js'))}`}}/></body></Html>}
