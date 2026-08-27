@@ -1,6 +1,7 @@
 {
   "name": "PawPing",
   "short_name": "PawPing",
+  "description": "QR pet recovery and sightings",
   "start_url": "/owner",
   "display": "standalone",
   "background_color": "#f3f6f2",
