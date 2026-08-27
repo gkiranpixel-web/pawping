@@ -1,2 +1,2 @@
 import Link from "next/link";
-export default function Home(){return <main className="shell"><section className="panel center"><div className="logo">🐾</div><h1>PawPing</h1><p className="muted">QR-based pet recovery, with an owner dashboard.</p><div className="actions"><Link className="primary" href="/owner">Owner dashboard</Link></div></section></main>}
+export default function Home(){return <main className="shell"><section className="panel center"><div className="logo">🐾</div><p className="eyebrow">PAWPING V2</p><h1>Every scan can lead home.</h1><p className="muted">QR pet profiles, finder locations and one private owner dashboard.</p><Link className="primary block" href="/owner">Open owner dashboard</Link></section></main>}
