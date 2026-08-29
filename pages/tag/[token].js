@@ -32,8 +32,9 @@ export default function Tag(){
   useEffect(()=>{
     if(!query.token||!supabase)return;
     (async()=>{
-      const {data}=await supabase.from("cats").select("name,public_token").eq("public_token",query.token).maybeSingle();
-      setPet(data);
+      // Safe, token-gated read — see get_public_pet in the v11 migration.
+      const {data}=await supabase.rpc("get_public_pet",{p_token:query.token});
+      setPet(data?.[0]||null);
       setLoading(false);
     })();
   },[query.token]);
@@ -41,7 +42,7 @@ export default function Tag(){
   useEffect(()=>{
     if(!pet)return;
     (async()=>{
-      const url=location.origin+"/c/"+pet.public_token;
+      const url=location.origin+"/c/"+query.token;
       const px=Math.round(size*12); // ~300dpi-equivalent pixel resolution for a crisp print at this physical size
       setQr(await QRCode.toDataURL(url,{width:px,margin:1,errorCorrectionLevel:"M"}));
     })();
@@ -64,7 +65,7 @@ export default function Tag(){
       </select>
       <p className="muted">{active?.note} Print at 100% / "actual size" — if your print dialog offers "fit to page," turn it off, or the tag will come out the wrong size.</p>
       <button onClick={()=>window.print()}>🖨️ Print this tag</button>
-      <a className="secondary linkButton block" href={`/poster/${pet.public_token}`}>Need a full-size lost-pet poster instead?</a>
+      <a className="secondary linkButton block" href={`/poster/${query.token}`}>Need a full-size lost-pet poster instead?</a>
     </section>
 
     <div className="tagSheet">

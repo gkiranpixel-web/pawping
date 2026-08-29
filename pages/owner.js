@@ -183,6 +183,10 @@ export default function Owner(){
 
     {msg&&<p className="notice">{msg}</p>}
 
+    {notif==="default"&&<p className="notice">🔔 <b>Turn on sighting alerts</b> — finders never see your phone or email, so a push notification is the only instant way you'll know someone found a pet. <button className="secondary" onClick={enableNotifications}>Enable now</button></p>}
+    {notif==="denied"&&<p className="notice">🔕 Notifications are blocked in this browser's settings. Since finders can't see your contact info either, re-enabling them (in your browser's site settings for PawPing) is how you'll hear about a sighting the moment it happens.</p>}
+    {notif==="unsupported"&&<p className="notice">🔕 Push notifications aren't available in this browser session. On iPhone, add PawPing to your Home Screen first — see <Link href="/help">Help</Link> for the steps.</p>}
+
     <section className="stats">{stats.map(([n,t])=><div className="stat" key={t}><b>{n}</b><span>{t}</span></div>)}</section>
 
     <nav>
@@ -216,8 +220,8 @@ export default function Owner(){
         <h2>{editingId?"Edit pet":"Add pet"}</h2>
         <form onSubmit={save}>
           {["name","age","color","temperament","health_note"].map(k=><div key={k}><label>{k.replace("_"," ")}</label><input required={k==="name"} value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})}/></div>)}
-          <label>Contact phone (optional)</label>
-          <input type="tel" placeholder="For finders who'd rather call than use the app" value={form.contact_phone} onChange={e=>setForm({...form,contact_phone:e.target.value})}/>
+          <label>Your phone (private, optional)</label>
+          <input type="tel" placeholder="Kept for your own reference only — never shown to finders" value={form.contact_phone} onChange={e=>setForm({...form,contact_phone:e.target.value})}/>
           <label>Photo{editingId?" (leave empty to keep current)":""}</label>
           <input type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>setPhoto(e.target.files?.[0])}/>
           <label>Status</label>
