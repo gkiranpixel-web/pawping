@@ -1,6 +1,6 @@
 {
   "name": "pawping",
-  "version": "8.0.0-admin-tools",
+  "version": "9.0.0-owner-experience",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -12,6 +12,7 @@
     "next": "^15.5.0",
     "qrcode": "^1.5.4",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "web-push": "^3.6.7"
   }
 }

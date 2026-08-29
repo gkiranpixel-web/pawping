@@ -1,0 +1,55 @@
+import {useRouter} from "next/router";
+import {useEffect,useState} from "react";
+import QRCode from "qrcode";
+import {supabase,ready} from "../../../lib/supabase";
+
+// A print-ready "MISSING" flyer for a single pet — the kind of thing an
+// owner posts on a lamppost or shares in a neighborhood group, but with a
+// QR code straight to the finder-report page instead of a phone number
+// that gets lost. Public, same trust level as the profile page itself.
+export default function Poster(){
+  const {query}=useRouter();
+  const [pet,setPet]=useState(null);
+  const [qr,setQr]=useState("");
+  const [loading,setLoading]=useState(true);
+
+  useEffect(()=>{
+    if(!query.token||!supabase)return;
+    (async()=>{
+      const {data}=await supabase.from("cats").select("name,photo_url,age,color,contact_phone,status,public_token").eq("public_token",query.token).maybeSingle();
+      setPet(data);
+      setLoading(false);
+      if(data){
+        const url=location.origin+"/c/"+data.public_token;
+        setQr(await QRCode.toDataURL(url,{width:400,margin:1}));
+      }
+    })();
+  },[query.token]);
+
+  if(!ready)return <main className="shell"><section className="card">Setup missing.</section></main>;
+  if(loading)return <main className="shell"><section className="card">Loading...</section></main>;
+  if(!pet)return <main className="shell"><section className="card"><h1>Pet not found</h1></section></main>;
+
+  return <main className="shell">
+    <div className="posterActions noPrint">
+      <button onClick={()=>window.print()}>🖨️ Print this poster</button>
+    </div>
+    <article className="poster">
+      <h1>MISSING</h1>
+      <p className="subhead">Have you seen {pet.name}?</p>
+      <div className="posterBody">
+        {pet.photo_url?<img className="photo" src={pet.photo_url} alt={pet.name}/>:<div className="photo" style={{display:"grid",placeItems:"center",fontSize:80}}>🐈</div>}
+        <div className="posterFacts">
+          <div><small>Name</small>{pet.name}</div>
+          <div><small>Color</small>{pet.color||"Not provided"}</div>
+          <div><small>Age</small>{pet.age||"Not provided"}</div>
+          {pet.contact_phone&&<div><small>Call or text</small><a href={`tel:${pet.contact_phone}`}>{pet.contact_phone}</a></div>}
+        </div>
+      </div>
+      <div className="posterQr">
+        {qr&&<img src={qr} alt="QR code"/>}
+        <p>Scan to report a sighting</p>
+      </div>
+    </article>
+  </main>;
+}

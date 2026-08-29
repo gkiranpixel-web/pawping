@@ -3,7 +3,14 @@ import Link from "next/link";
 import QRCode from "qrcode";
 import {supabase,ready} from "../lib/supabase";
 
-const blank={name:"",age:"",color:"",temperament:"",health_note:"",status:"safe"};
+const blank={name:"",age:"",color:"",temperament:"",health_note:"",contact_phone:"",status:"safe"};
+
+function urlBase64ToUint8Array(base64String){
+  const padding="=".repeat((4-base64String.length%4)%4);
+  const base64=(base64String+padding).replace(/-/g,"+").replace(/_/g,"/");
+  const raw=atob(base64);
+  return Uint8Array.from([...raw].map(c=>c.charCodeAt(0)));
+}
 
 export default function Owner(){
   const [session,setSession]=useState(null);
@@ -18,6 +25,7 @@ export default function Owner(){
   const [selected,setSelected]=useState(null);
   const [filter,setFilter]=useState("all");
   const [showUnresolvedOnly,setShowUnresolvedOnly]=useState(false);
+  const [notif,setNotif]=useState("checking");
 
   useEffect(()=>{
     if(!supabase)return;
@@ -26,11 +34,43 @@ export default function Owner(){
     return()=>l.subscription.unsubscribe();
   },[]);
   useEffect(()=>{if(session)load()},[session]);
+  useEffect(()=>{checkNotifStatus()},[]);
+
+  async function checkNotifStatus(){
+    if(typeof window==="undefined"||!("serviceWorker" in navigator)||!("PushManager" in window)){setNotif("unsupported");return}
+    if(Notification.permission==="denied"){setNotif("denied");return}
+    try{
+      const reg=await navigator.serviceWorker.ready;
+      const sub=await reg.pushManager.getSubscription();
+      setNotif(sub?"subscribed":"default");
+    }catch(e){
+      setNotif("default");
+    }
+  }
+
+  async function enableNotifications(){
+    const key=process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+    if(!key){setMsg("Push notifications are not configured on this deployment yet.");return}
+    const permission=await Notification.requestPermission();
+    if(permission!=="granted"){setNotif(permission==="denied"?"denied":"default");return}
+    const reg=await navigator.serviceWorker.ready;
+    const sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlBase64ToUint8Array(key)});
+    const json=sub.toJSON();
+    const {error}=await supabase.from("push_subscriptions").upsert({
+      owner_id:session.user.id,
+      endpoint:json.endpoint,
+      p256dh:json.keys.p256dh,
+      auth:json.keys.auth,
+    },{onConflict:"endpoint"});
+    if(error){setMsg(error.message);return}
+    setNotif("subscribed");
+    setMsg("Sighting alerts are on for this device.");
+  }
 
   async function load(){
     const [p,r]=await Promise.all([
       supabase.from("cats").select("*").eq("owner_id",session.user.id).order("created_at",{ascending:false}),
-      supabase.from("finder_reports").select("id,cat_id,latitude,longitude,accuracy_m,message,resolved_at,created_at,cats!inner(name,owner_id)").eq("cats.owner_id",session.user.id).order("created_at",{ascending:false}),
+      supabase.from("finder_reports").select("id,cat_id,latitude,longitude,accuracy_m,message,report_type,resolved_at,created_at,cats!inner(name,owner_id)").eq("cats.owner_id",session.user.id).order("created_at",{ascending:false}),
     ]);
     setPets(p.data||[]);
     setReports(r.data||[]);
@@ -46,7 +86,7 @@ export default function Owner(){
 
   function startEdit(p){
     setEditingId(p.id);
-    setForm({name:p.name||"",age:p.age||"",color:p.color||"",temperament:p.temperament||"",health_note:p.health_note||"",status:p.status});
+    setForm({name:p.name||"",age:p.age||"",color:p.color||"",temperament:p.temperament||"",health_note:p.health_note||"",contact_phone:p.contact_phone||"",status:p.status});
     setPhoto(null);
     setMsg("");
   }
@@ -132,7 +172,12 @@ export default function Owner(){
   return <main className="wide">
     <header>
       <div><p className="eyebrow">OWNER DASHBOARD</p><h1>PawPing</h1></div>
-      <div className="actions"><Link className="secondary linkButton" href="/admin">Admin</Link><button className="secondary" onClick={()=>supabase.auth.signOut()}>Sign out</button></div>
+      <div className="actions">
+        {notif==="default"&&<button className="secondary" onClick={enableNotifications}>🔔 Enable alerts</button>}
+        {notif==="subscribed"&&<span className="secondary linkButton">🔔 Alerts on</span>}
+        <Link className="secondary linkButton" href="/admin">Admin</Link>
+        <button className="secondary" onClick={()=>supabase.auth.signOut()}>Sign out</button>
+      </div>
     </header>
 
     {msg&&<p className="notice">{msg}</p>}
@@ -145,21 +190,32 @@ export default function Owner(){
     </nav>
 
     {tab==="pets"&&<div className="layout">
-      <section><div className="grid">{pets.map(p=>{
-        const url=location.origin+"/c/"+p.public_token;
-        return <article className="card" key={p.id}>
-          <div className="petTitle">{p.photo_url?<img src={p.photo_url} alt=""/>:<span>🐈</span>}<div><h3>{p.name}</h3><small className={`status ${p.status}`}>{p.status}</small></div></div>
-          <p>{p.color||"No color"} · {p.age||"No age"}</p>
-          <div className="actions"><button onClick={()=>qr(p)}>Download QR</button><button className="secondary" onClick={()=>navigator.clipboard.writeText(url)}>Copy link</button></div>
-          <div className="actions"><a className="secondary linkButton" target="_blank" href={`/c/${p.public_token}`}>Open profile</a><button className="secondary" onClick={()=>toggle(p)}>Mark {p.status==="safe"?"missing":"safe"}</button></div>
-          <div className="actions"><button className="secondary" onClick={()=>startEdit(p)}>Edit</button><button className="danger" onClick={()=>removePet(p)}>Delete</button></div>
-        </article>;
-      })}</div>{!pets.length&&<div className="empty">No pets yet. Add your first one.</div>}</section>
+      <section>
+        {!pets.length&&<div className="checklist">
+          <div className="checklistItem"><span className="checklistNum">1</span><div className="checklistBody"><b>Add your first pet</b><span>Fill in the form on the right — only the name is required.</span></div></div>
+          <div className="checklistItem"><span className="checklistNum">2</span><div className="checklistBody"><b>Then: download the QR tag</b><span>Print it and attach it to a collar tag or clip.</span></div></div>
+          <div className="checklistItem"><span className="checklistNum">3</span><div className="checklistBody"><b>Then: turn on sighting alerts</b><span>So you find out the moment someone scans it.</span></div></div>
+        </div>}
+        <div className="grid">{pets.map(p=>{
+          const url=location.origin+"/c/"+p.public_token;
+          return <article className="card" key={p.id}>
+            <div className="petTitle">{p.photo_url?<img src={p.photo_url} alt=""/>:<span>🐈</span>}<div><h3>{p.name}</h3><small className={`status ${p.status}`}>{p.status}</small></div></div>
+            <p>{p.color||"No color"} · {p.age||"No age"}</p>
+            <div className="actions"><button onClick={()=>qr(p)}>Download QR</button><button className="secondary" onClick={()=>navigator.clipboard.writeText(url)}>Copy link</button></div>
+            <div className="actions"><a className="secondary linkButton" target="_blank" href={`/c/${p.public_token}`}>Open profile</a><a className="secondary linkButton" target="_blank" href={`/c/${p.public_token}/poster`}>Missing poster</a></div>
+            <div className="actions"><button className="secondary" onClick={()=>toggle(p)}>Mark {p.status==="safe"?"missing":"safe"}</button><button className="secondary" onClick={()=>startEdit(p)}>Edit</button></div>
+            <div className="actions"><button className="danger block" onClick={()=>removePet(p)}>Delete pet</button></div>
+          </article>;
+        })}</div>
+        {!pets.length&&<div className="empty">Add your first pet to get started.</div>}
+      </section>
 
       <aside className="card">
         <h2>{editingId?"Edit pet":"Add pet"}</h2>
         <form onSubmit={save}>
           {["name","age","color","temperament","health_note"].map(k=><div key={k}><label>{k.replace("_"," ")}</label><input required={k==="name"} value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})}/></div>)}
+          <label>Contact phone (optional)</label>
+          <input type="tel" placeholder="For finders who'd rather call than use the app" value={form.contact_phone} onChange={e=>setForm({...form,contact_phone:e.target.value})}/>
           <label>Photo{editingId?" (leave empty to keep current)":""}</label>
           <input type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>setPhoto(e.target.files?.[0])}/>
           <label>Status</label>
@@ -180,7 +236,7 @@ export default function Owner(){
 
       {selected&&<div className="mapCard">
         <div>
-          <h3>{selected.cats?.name}</h3>
+          <h3>{selected.cats?.name}{selected.report_type==="have"&&<span className="reportType have">Has pet</span>}</h3>
           <p>{selected.message||"No message"}</p>
           <small>{new Date(selected.created_at).toLocaleString()}</small>
           <div className="actions"><button className="secondary" onClick={()=>markReviewed(selected)}>{selected.resolved_at?"Mark unreviewed":"Mark reviewed"}</button></div>
@@ -191,7 +247,7 @@ export default function Owner(){
       <div className="timeline">{shown.map(r=><div className={`sighting ${selected?.id===r.id?"active":""}`} key={r.id}>
         <button className="sightingMain" onClick={()=>setSelected(r)}>
           <span>📍</span>
-          <span className="sightingText"><b>{r.cats?.name}{!r.resolved_at&&<span className="badge">NEW</span>}</b><span>{r.message||"Finder shared a location"}</span><small>{new Date(r.created_at).toLocaleString()} · {r.accuracy_m?Math.round(r.accuracy_m)+" m":"No accuracy"}</small></span>
+          <span className="sightingText"><b>{r.cats?.name}{!r.resolved_at&&<span className="badge">NEW</span>}{r.report_type==="have"&&<span className="reportType have">Has pet</span>}</b><span>{r.message||"Finder shared a location"}</span><small>{new Date(r.created_at).toLocaleString()} · {r.accuracy_m?Math.round(r.accuracy_m)+" m":"No accuracy"}</small></span>
         </button>
         <button className="secondary reviewButton" onClick={()=>markReviewed(r)}>{r.resolved_at?"Reviewed":"Mark reviewed"}</button>
       </div>)}{!shown.length&&<div className="empty">No sightings yet.</div>}</div>
