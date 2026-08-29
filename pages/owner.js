@@ -175,6 +175,7 @@ export default function Owner(){
       <div className="actions">
         {notif==="default"&&<button className="secondary" onClick={enableNotifications}>🔔 Enable alerts</button>}
         {notif==="subscribed"&&<span className="secondary linkButton">🔔 Alerts on</span>}
+        <Link className="secondary linkButton" href="/help">Help</Link>
         <Link className="secondary linkButton" href="/admin">Admin</Link>
         <button className="secondary" onClick={()=>supabase.auth.signOut()}>Sign out</button>
       </div>
@@ -202,7 +203,7 @@ export default function Owner(){
             <div className="petTitle">{p.photo_url?<img src={p.photo_url} alt=""/>:<span>🐈</span>}<div><h3>{p.name}</h3><small className={`status ${p.status}`}>{p.status}</small></div></div>
             <p>{p.color||"No color"} · {p.age||"No age"}</p>
             <div className="actions"><button onClick={()=>qr(p)}>Download QR</button><button className="secondary" onClick={()=>navigator.clipboard.writeText(url)}>Copy link</button></div>
-            <div className="actions"><a className="secondary linkButton" target="_blank" href={`/c/${p.public_token}`}>Open profile</a><a className="secondary linkButton" target="_blank" href={`/c/${p.public_token}/poster`}>Missing poster</a></div>
+            <div className="actions"><a className="secondary linkButton" target="_blank" href={`/c/${p.public_token}`}>Open profile</a><a className="secondary linkButton" target="_blank" href={`/poster/${p.public_token}`}>Missing poster</a></div>
             <div className="actions"><button className="secondary" onClick={()=>toggle(p)}>Mark {p.status==="safe"?"missing":"safe"}</button><button className="secondary" onClick={()=>startEdit(p)}>Edit</button></div>
             <div className="actions"><button className="danger block" onClick={()=>removePet(p)}>Delete pet</button></div>
           </article>;

@@ -1,12 +1,16 @@
 import {useRouter} from "next/router";
 import {useEffect,useState} from "react";
 import QRCode from "qrcode";
-import {supabase,ready} from "../../../lib/supabase";
+import {supabase,ready} from "../../lib/supabase";
 
 // A print-ready "MISSING" flyer for a single pet — the kind of thing an
 // owner posts on a lamppost or shares in a neighborhood group, but with a
 // QR code straight to the finder-report page instead of a phone number
 // that gets lost. Public, same trust level as the profile page itself.
+//
+// Deliberately its own top-level route (/poster/:token) rather than nested
+// under /c/[token]/... — Next.js's Pages Router does not reliably resolve
+// a page file and a same-named dynamic folder both matching /c/[token].
 export default function Poster(){
   const {query}=useRouter();
   const [pet,setPet]=useState(null);
