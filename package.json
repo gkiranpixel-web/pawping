@@ -1,6 +1,6 @@
 {
   "name": "pawping",
-  "version": "7.0.0-weekend",
+  "version": "8.0.0-admin-tools",
   "private": true,
   "scripts": {
     "dev": "next dev",
