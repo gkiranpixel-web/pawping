@@ -13,6 +13,7 @@ const FAQ=[
   {q:"Can I edit or remove a pet later?",a:"Yes — every pet card has Edit and Delete. Deleting a pet also removes its sighting history, so it can't be undone."},
   {q:"Is the location a finder shares exact?",a:"Yes, but only after the finder explicitly grants location permission, and only you (the owner) can see it — never anyone else."},
   {q:"What if I have more than one pet?",a:"Add as many as you like — each gets its own QR tag, profile, and sighting history, all in one dashboard."},
+  {q:"The QR download is too big for a collar — what do I use instead?",a:"Open a pet's \"🏷️ Collar-sized tag\" link instead of the plain QR download. It prints at a real physical size (25mm for cats, 35mm or 45mm for dogs or a carrier) so you can cut it out and laminate it or slip it into a tag pouch, rather than shrinking a poster-sized QR code by eye."},
 ];
 
 export default function Help(){

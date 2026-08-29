@@ -204,6 +204,7 @@ export default function Owner(){
             <p>{p.color||"No color"} · {p.age||"No age"}</p>
             <div className="actions"><button onClick={()=>qr(p)}>Download QR</button><button className="secondary" onClick={()=>navigator.clipboard.writeText(url)}>Copy link</button></div>
             <div className="actions"><a className="secondary linkButton" target="_blank" href={`/c/${p.public_token}`}>Open profile</a><a className="secondary linkButton" target="_blank" href={`/poster/${p.public_token}`}>Missing poster</a></div>
+            <div className="actions"><a className="secondary linkButton block" target="_blank" href={`/tag/${p.public_token}`}>🏷️ Collar-sized tag (fits a cat)</a></div>
             <div className="actions"><button className="secondary" onClick={()=>toggle(p)}>Mark {p.status==="safe"?"missing":"safe"}</button><button className="secondary" onClick={()=>startEdit(p)}>Edit</button></div>
             <div className="actions"><button className="danger block" onClick={()=>removePet(p)}>Delete pet</button></div>
           </article>;

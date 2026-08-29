@@ -1,4 +1,4 @@
-const C = "pawping-owner-experience-v9";
+const C = "pawping-cache-v0.5.0";
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(C).then(c => c.addAll(["/", "/owner", "/manifest.json", "/icon.svg"])));
