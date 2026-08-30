@@ -27,6 +27,18 @@ The version shown in the footer of every page (bottom of the screen) always matc
 `package.json`, so a mismatch between what you see live and what's in this file means
 the latest deploy hasn't gone out yet.
 
+## 0.6.1
+
+- **Rotated a leaked secret**: an earlier import doc (`IMPORT_V9.md`) had a real VAPID
+  key pair pasted directly into it and committed to the public GitHub repo. GitGuardian
+  flagged it; the key pair has been rotated (a fresh one generated, the old one is
+  permanently retired) and the doc no longer contains real secret values — it points
+  to generating your own instead of ever hardcoding one into a committed file again.
+- The owner dashboard now detects when a browser's push subscription was signed with a
+  now-retired VAPID key (e.g. after a rotation like this one) and treats it as
+  unsubscribed instead of silently reporting alerts as "on" when they'd actually fail
+  to deliver — you get prompted to re-enable, and the new subscription just works.
+
 ## 0.6.0
 
 - **Closed a real privacy gap**: the database let anyone with the app's public key read

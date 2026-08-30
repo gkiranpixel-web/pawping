@@ -2,16 +2,16 @@ import {useEffect,useMemo,useState} from "react";
 import Link from "next/link";
 import QRCode from "qrcode";
 import {supabase,ready} from "../lib/supabase";
-
+ 
 const blank={name:"",age:"",color:"",temperament:"",health_note:"",contact_phone:"",status:"safe"};
-
+ 
 function urlBase64ToUint8Array(base64String){
   const padding="=".repeat((4-base64String.length%4)%4);
   const base64=(base64String+padding).replace(/-/g,"+").replace(/_/g,"/");
   const raw=atob(base64);
   return Uint8Array.from([...raw].map(c=>c.charCodeAt(0)));
 }
-
+ 
 export default function Owner(){
   const [session,setSession]=useState(null);
   const [email,setEmail]=useState("");
@@ -26,7 +26,7 @@ export default function Owner(){
   const [filter,setFilter]=useState("all");
   const [showUnresolvedOnly,setShowUnresolvedOnly]=useState(false);
   const [notif,setNotif]=useState("checking");
-
+ 
   useEffect(()=>{
     if(!supabase)return;
     supabase.auth.getSession().then(({data})=>setSession(data.session));
@@ -35,19 +35,38 @@ export default function Owner(){
   },[]);
   useEffect(()=>{if(session)load()},[session]);
   useEffect(()=>{checkNotifStatus()},[]);
-
+ 
   async function checkNotifStatus(){
     if(typeof window==="undefined"||!("serviceWorker" in navigator)||!("PushManager" in window)){setNotif("unsupported");return}
     if(Notification.permission==="denied"){setNotif("denied");return}
     try{
       const reg=await navigator.serviceWorker.ready;
       const sub=await reg.pushManager.getSubscription();
+      if(sub){
+        // If the VAPID key pair was ever rotated (e.g. after a leaked-key
+        // incident) after this browser subscribed, the subscription is
+        // dead — it was signed with a public key the server's current
+        // private key no longer matches, so pushes to it fail silently.
+        // Detect that instead of reporting a false "subscribed" state.
+        const currentKey=process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+        const subKey=sub.options&&sub.options.applicationServerKey;
+        if(currentKey&&subKey){
+          const current=urlBase64ToUint8Array(currentKey);
+          const subBytes=new Uint8Array(subKey);
+          const matches=current.length===subBytes.length&&current.every((b,i)=>b===subBytes[i]);
+          if(!matches){
+            await sub.unsubscribe();
+            setNotif("default");
+            return;
+          }
+        }
+      }
       setNotif(sub?"subscribed":"default");
     }catch(e){
       setNotif("default");
     }
   }
-
+ 
   async function enableNotifications(){
     const key=process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
     if(!key){setMsg("Push notifications are not configured on this deployment yet.");return}
@@ -66,7 +85,7 @@ export default function Owner(){
     setNotif("subscribed");
     setMsg("Sighting alerts are on for this device.");
   }
-
+ 
   async function load(){
     const [p,r]=await Promise.all([
       supabase.from("cats").select("*").eq("owner_id",session.user.id).order("created_at",{ascending:false}),
@@ -77,13 +96,13 @@ export default function Owner(){
     setSelected(x=>x||r.data?.[0]||null);
     if(p.error||r.error)setMsg((p.error||r.error).message);
   }
-
+ 
   async function login(e){
     e.preventDefault();
     const {error}=await supabase.auth.signInWithOtp({email,options:{emailRedirectTo:location.origin+"/owner"}});
     setMsg(error?error.message:"Check your email for the login link.");
   }
-
+ 
   function startEdit(p){
     setEditingId(p.id);
     setForm({name:p.name||"",age:p.age||"",color:p.color||"",temperament:p.temperament||"",health_note:p.health_note||"",contact_phone:p.contact_phone||"",status:p.status});
@@ -95,7 +114,7 @@ export default function Owner(){
     setForm(blank);
     setPhoto(null);
   }
-
+ 
   async function save(e){
     e.preventDefault();
     let photo_url;
@@ -105,7 +124,7 @@ export default function Owner(){
       if(error){setMsg(error.message);return}
       photo_url=supabase.storage.from("pet-photos").getPublicUrl(path).data.publicUrl;
     }
-
+ 
     if(editingId){
       const patch={...form};
       if(photo_url)patch.photo_url=photo_url;
@@ -114,7 +133,7 @@ export default function Owner(){
       if(!error){cancelEdit();load()}
       return;
     }
-
+ 
     const {error}=await supabase.from("cats").insert({
       ...form,
       photo_url:photo_url||null,
@@ -124,7 +143,7 @@ export default function Owner(){
     setMsg(error?error.message:"Pet created.");
     if(!error){setForm(blank);setPhoto(null);load()}
   }
-
+ 
   async function qr(p){
     const url=location.origin+"/c/"+p.public_token;
     const data=await QRCode.toDataURL(url,{width:1000,margin:2});
@@ -133,12 +152,12 @@ export default function Owner(){
     a.download=`pawping-${p.name}-qr.png`;
     a.click();
   }
-
+ 
   async function toggle(p){
     await supabase.from("cats").update({status:p.status==="safe"?"missing":"safe",status_changed_at:new Date().toISOString()}).eq("id",p.id);
     load();
   }
-
+ 
   async function removePet(p){
     if(!confirm(`Delete ${p.name} and all of its sightings? This cannot be undone.`))return;
     const {error}=await supabase.from("cats").delete().eq("id",p.id);
@@ -146,16 +165,16 @@ export default function Owner(){
     if(editingId===p.id)cancelEdit();
     load();
   }
-
+ 
   async function markReviewed(r){
     await supabase.from("finder_reports").update({resolved_at:r.resolved_at?null:new Date().toISOString()}).eq("id",r.id);
     load();
   }
-
+ 
   const byFilter=useMemo(()=>filter==="all"?reports:reports.filter(r=>r.cat_id===filter),[reports,filter]);
   const shown=useMemo(()=>showUnresolvedOnly?byFilter.filter(r=>!r.resolved_at):byFilter,[byFilter,showUnresolvedOnly]);
   const unresolvedCount=useMemo(()=>reports.filter(r=>!r.resolved_at).length,[reports]);
-
+ 
   const stats=[
     [pets.length,"Pets"],
     [reports.length,"Sightings"],
@@ -163,12 +182,12 @@ export default function Owner(){
     [reports.filter(r=>Date.now()-new Date(r.created_at).getTime()<86400000).length,"Last 24h"],
     [pets.filter(p=>p.status==="missing").length,"Missing"],
   ];
-
+ 
   if(!ready)return <main className="shell"><section className="card">Setup missing.</section></main>;
   if(!session)return <main className="shell"><section className="card center"><div className="paw">🐾</div><h1>Owner login</h1><form onSubmit={login}><label>Email</label><input type="email" value={email} onChange={e=>setEmail(e.target.value)} required/><button>Send magic link</button></form>{msg&&<p className="notice">{msg}</p>}</section></main>;
-
+ 
   const map=selected?`https://www.openstreetmap.org/export/embed.html?bbox=${selected.longitude-.008}%2C${selected.latitude-.005}%2C${selected.longitude+.008}%2C${selected.latitude+.005}&layer=mapnik&marker=${selected.latitude}%2C${selected.longitude}`:"";
-
+ 
   return <main className="wide">
     <header>
       <div><p className="eyebrow">OWNER DASHBOARD</p><h1>PawPing</h1></div>
@@ -180,20 +199,20 @@ export default function Owner(){
         <button className="secondary" onClick={()=>supabase.auth.signOut()}>Sign out</button>
       </div>
     </header>
-
+ 
     {msg&&<p className="notice">{msg}</p>}
-
+ 
     {notif==="default"&&<p className="notice">🔔 <b>Turn on sighting alerts</b> — finders never see your phone or email, so a push notification is the only instant way you'll know someone found a pet. <button className="secondary" onClick={enableNotifications}>Enable now</button></p>}
     {notif==="denied"&&<p className="notice">🔕 Notifications are blocked in this browser's settings. Since finders can't see your contact info either, re-enabling them (in your browser's site settings for PawPing) is how you'll hear about a sighting the moment it happens.</p>}
     {notif==="unsupported"&&<p className="notice">🔕 Push notifications aren't available in this browser session. On iPhone, add PawPing to your Home Screen first — see <Link href="/help">Help</Link> for the steps.</p>}
-
+ 
     <section className="stats">{stats.map(([n,t])=><div className="stat" key={t}><b>{n}</b><span>{t}</span></div>)}</section>
-
+ 
     <nav>
       <button className={tab==="pets"?"":"secondary"} onClick={()=>setTab("pets")}>My pets</button>
       <button className={tab==="sightings"?"":"secondary"} onClick={()=>setTab("sightings")}>Recent sightings{unresolvedCount?` (${unresolvedCount})`:""}</button>
     </nav>
-
+ 
     {tab==="pets"&&<div className="layout">
       <section>
         {!pets.length&&<div className="checklist">
@@ -215,7 +234,7 @@ export default function Owner(){
         })}</div>
         {!pets.length&&<div className="empty">Add your first pet to get started.</div>}
       </section>
-
+ 
       <aside className="card">
         <h2>{editingId?"Edit pet":"Add pet"}</h2>
         <form onSubmit={save}>
@@ -230,7 +249,7 @@ export default function Owner(){
         </form>
       </aside>
     </div>}
-
+ 
     {tab==="sightings"&&<section>
       <div className="sectionTitle">
         <div><h2>Recent sightings</h2><p className="muted">Newest reports first.</p></div>
@@ -239,7 +258,7 @@ export default function Owner(){
           <select className="filter" value={filter} onChange={e=>{setFilter(e.target.value);setSelected(null)}}><option value="all">All pets</option>{pets.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select>
         </div>
       </div>
-
+ 
       {selected&&<div className="mapCard">
         <div>
           <h3>{selected.cats?.name}{selected.report_type==="have"&&<span className="reportType have">Has pet</span>}</h3>
@@ -249,7 +268,7 @@ export default function Owner(){
         </div>
         <iframe title="Sighting" src={map}/>
       </div>}
-
+ 
       <div className="timeline">{shown.map(r=><div className={`sighting ${selected?.id===r.id?"active":""}`} key={r.id}>
         <button className="sightingMain" onClick={()=>setSelected(r)}>
           <span>📍</span>
@@ -260,3 +279,4 @@ export default function Owner(){
     </section>}
   </main>;
 }
+ 
