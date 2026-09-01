@@ -247,9 +247,25 @@ export default function Owner(){
   // the form itself — not the dashboard's categoryFilter above, a
   // separate, unrelated dropdown.
   const category=getCategory(form.category);
-  const byFilter=useMemo(()=>filter==="all"?reports:reports.filter(r=>r.cat_id===filter),[reports,filter]);
+  // Everything below — the stats bar, the tab labels, and which reports
+  // show up in "Recent sightings" — tracks categoryFilter too, the same
+  // way dashboardBrand and shownPets (above) already do. Filtering the
+  // grid down to "Items" but leaving the stats bar and tab buttons still
+  // talking about "Pets"/sightings totals for every category was a real
+  // gap GK reported: the page title changed, nothing else did.
+  const filterCategory=categoryFilter==="all"?null:getCategory(categoryFilter);
+  const dashboardNoun=filterCategory?`${filterCategory.itemNoun}s`:"pets";
+  const dashboardNounCap=dashboardNoun.charAt(0).toUpperCase()+dashboardNoun.slice(1);
+  // "Sightings" only exist for a findable category (pet, item) — a
+  // property tag or medical ID never has a report flow (see
+  // lib/categories.ts's hasReportFlow), so once one of those is the
+  // selected category there's nothing to count or show a tab for.
+  const sightingsApply=!filterCategory||filterCategory.hasReportFlow;
+  const catIdsInFilter=useMemo(()=>new Set(shownPets.map(p=>p.id)),[shownPets]);
+  const categoryReports=useMemo(()=>categoryFilter==="all"?reports:reports.filter(r=>catIdsInFilter.has(r.cat_id)),[reports,categoryFilter,catIdsInFilter]);
+  const byFilter=useMemo(()=>filter==="all"?categoryReports:categoryReports.filter(r=>r.cat_id===filter),[categoryReports,filter]);
   const shown=useMemo(()=>showUnresolvedOnly?byFilter.filter(r=>!r.resolved_at):byFilter,[byFilter,showUnresolvedOnly]);
-  const unresolvedCount=useMemo(()=>reports.filter(r=>!r.resolved_at).length,[reports]);
+  const unresolvedCount=useMemo(()=>categoryReports.filter(r=>!r.resolved_at).length,[categoryReports]);
   const scansByCat=useMemo(()=>{
     const m={};
     scans.forEach(s=>{(m[s.cat_id]=m[s.cat_id]||[]).push(s);});
@@ -258,13 +274,28 @@ export default function Owner(){
   const scanCountFor=catId=>(scansByCat[catId]||[]).length;
   const recentScansFor=(catId,n=5)=>(scansByCat[catId]||[]).slice(0,n);
  
-  const stats=[
-    [pets.length,"Pets"],
-    [reports.length,"Sightings"],
+  // A property tag or medical ID has no missing/safe status and no
+  // sightings, but it does still get scanned — swap the sightings-shaped
+  // stats out for a scan count instead of showing zeroes that imply a
+  // broken feature.
+  const stats=sightingsApply?[
+    [shownPets.length,dashboardNounCap],
+    [categoryReports.length,"Sightings"],
     [unresolvedCount,"Needs review"],
-    [reports.filter(r=>Date.now()-new Date(r.created_at).getTime()<86400000).length,"Last 24h"],
-    [pets.filter(p=>p.status==="missing").length,"Missing"],
+    [categoryReports.filter(r=>Date.now()-new Date(r.created_at).getTime()<86400000).length,"Last 24h"],
+    [shownPets.filter(p=>p.status==="missing").length,"Missing"],
+  ]:[
+    [shownPets.length,dashboardNounCap],
+    [shownPets.reduce((sum,p)=>sum+scanCountFor(p.id),0),"Scans"],
   ];
+
+  // If the owner was on "Recent sightings" and then filters the dashboard
+  // down to a category that can't have any (property/medical), follow
+  // them back to the pets tab rather than leaving them on a tab whose nav
+  // button just disappeared.
+  useEffect(()=>{
+    if(!sightingsApply&&tab==="sightings")setTab("pets");
+  },[sightingsApply,tab]);
  
   if(!ready)return <main className="shell"><section className="card">Setup missing.</section></main>;
   if(!session)return <main className="shell"><section className="card center"><div className="paw">🏷️</div><h1>Owner login</h1><form onSubmit={login}><label>Email</label><input type="email" value={email} onChange={e=>setEmail(e.target.value)} required/><button>Send magic link</button></form>{msg&&<p className="notice">{msg}</p>}</section></main>;
@@ -290,11 +321,18 @@ export default function Owner(){
     {notif==="denied"&&<p className="notice">🔕 Notifications are blocked in this browser's settings. Since finders can't see your contact info either, re-enabling them (in your browser's site settings for TagPing) is how you'll hear about a sighting the moment it happens.</p>}
     {notif==="unsupported"&&<p className="notice">🔕 Push notifications aren't available in this browser session. On iPhone, add TagPing to your Home Screen first — see <Link href="/help">Help</Link> for the steps.</p>}
  
+    {isBeta&&pets.length>0&&<div className="actions" style={{marginBottom:12}}>
+      <select className="filter" value={categoryFilter} onChange={e=>setCategoryFilter(e.target.value)}>
+        <option value="all">All categories</option>
+        {categoryList().map(c=><option key={c.value} value={c.value}>{c.label}</option>)}
+      </select>
+    </div>}
+
     <section className="stats">{stats.map(([n,t])=><div className="stat" key={t}><b>{n}</b><span>{t}</span></div>)}</section>
  
     <nav>
-      <button className={tab==="pets"?"":"secondary"} onClick={()=>setTab("pets")}>My pets</button>
-      <button className={tab==="sightings"?"":"secondary"} onClick={()=>setTab("sightings")}>Recent sightings{unresolvedCount?` (${unresolvedCount})`:""}</button>
+      <button className={tab==="pets"?"":"secondary"} onClick={()=>setTab("pets")}>My {dashboardNoun}</button>
+      {sightingsApply&&<button className={tab==="sightings"?"":"secondary"} onClick={()=>setTab("sightings")}>Recent sightings{unresolvedCount?` (${unresolvedCount})`:""}</button>}
     </nav>
  
     {tab==="pets"&&<div className="layout">
@@ -303,12 +341,6 @@ export default function Owner(){
           <div className="checklistItem"><span className="checklistNum">1</span><div className="checklistBody"><b>Add your first pet</b><span>Fill in the form on the right — only the name is required.</span></div></div>
           <div className="checklistItem"><span className="checklistNum">2</span><div className="checklistBody"><b>Then: download the QR tag</b><span>Print it and attach it to a collar tag or clip.</span></div></div>
           <div className="checklistItem"><span className="checklistNum">3</span><div className="checklistBody"><b>Then: turn on sighting alerts</b><span>So you find out the moment someone scans it.</span></div></div>
-        </div>}
-        {isBeta&&pets.length>0&&<div className="actions" style={{marginBottom:12}}>
-          <select className="filter" value={categoryFilter} onChange={e=>setCategoryFilter(e.target.value)}>
-            <option value="all">All categories</option>
-            {categoryList().map(c=><option key={c.value} value={c.value}>{c.label}</option>)}
-          </select>
         </div>}
         <div className="grid">{shownPets.map(p=>{
           const url=location.origin+"/c/"+p.public_token;
@@ -394,7 +426,7 @@ export default function Owner(){
         <div><h2>Recent sightings</h2><p className="muted">Newest reports first.</p></div>
         <div className="actions">
           <label className="checkboxLabel"><input type="checkbox" checked={showUnresolvedOnly} onChange={e=>setShowUnresolvedOnly(e.target.checked)}/> Needs review only</label>
-          <select className="filter" value={filter} onChange={e=>{setFilter(e.target.value);setSelected(null)}}><option value="all">All pets</option>{pets.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select>
+          <select className="filter" value={filter} onChange={e=>{setFilter(e.target.value);setSelected(null)}}><option value="all">All {dashboardNoun}</option>{shownPets.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select>
         </div>
       </div>
  

@@ -27,6 +27,32 @@ The version shown in the footer of every page (bottom of the screen) always matc
 `package.json`, so a mismatch between what you see live and what's in this file means
 the latest deploy hasn't gone out yet.
 
+## 0.8.4
+
+- Fixed another spot GK found right after 0.8.3: the owner dashboard's
+  category filter changed the page title (PawPing/TagPing/StayPing/
+  VitalPing) but left the stats bar, the "My pets" tab button, and the
+  "Recent sightings" tab all talking about pets and sightings no matter
+  which category was selected — filter down to "Items" and the stats
+  bar still counted every pet, still said "Missing," and the sightings
+  tab still listed every category's reports.
+  - The category filter dropdown moved to the top of the page (it used
+    to be buried below the checklist, inside the pets tab body), so
+    it now visibly drives everything below it: title, stats, and tabs.
+  - The stats bar and the "My pets"/"All pets" labels now read "My
+    items" / "My property tags" / "My medical IDs" and count only the
+    selected category.
+  - Property tags and medical IDs have no missing/safe status and no
+    sightings (no report flow — see hasReportFlow in lib/categories.ts),
+    so selecting one of those swaps the sightings/missing stats for a
+    scan count instead of showing zeroes, and hides the "Recent
+    sightings" tab entirely (auto-switching back to the pets tab if it
+    was already open).
+  - "Recent sightings" itself is now scoped to the selected category
+    too, instead of always listing every pet's reports regardless of
+    the filter.
+- No schema change. No data migration.
+
 ## 0.8.3
 
 - Fixed the admin screen's other blind spot, reported by GK right after
