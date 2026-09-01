@@ -2,7 +2,7 @@ import {useEffect,useMemo,useState} from "react";
 import Link from "next/link";
 import QRCode from "qrcode";
 import {supabase,ready} from "../lib/supabase";
-import {getCategory,categoryList,detailFieldsFor} from "../lib/categories";
+import {getCategory,categoryList,detailFieldsFor,privateDetailFieldsFor} from "../lib/categories";
  
 const blank={name:"",age:"",color:"",temperament:"",health_note:"",contact_phone:"",status:"safe",category:"pet"};
  
@@ -18,9 +18,12 @@ export default function Owner(){
   const [email,setEmail]=useState("");
   const [pets,setPets]=useState([]);
   const [reports,setReports]=useState([]);
+  const [scans,setScans]=useState([]);
+  const [expandedScans,setExpandedScans]=useState(()=>new Set());
   const [form,setForm]=useState(blank);
   const [photo,setPhoto]=useState(null);
   const [detailsForm,setDetailsForm]=useState({});
+  const [privateDetailsForm,setPrivateDetailsForm]=useState({});
   const [isBeta,setIsBeta]=useState(false);
   const [editingId,setEditingId]=useState(null);
   const [msg,setMsg]=useState("");
@@ -107,6 +110,11 @@ export default function Owner(){
     setReports(r.data||[]);
     setSelected(x=>x||r.data?.[0]||null);
     if(p.error||r.error)setMsg((p.error||r.error).message);
+    // Scan activity: RLS already scopes this to the caller's own cats (see
+    // the "Owners read scan events" policy), so no extra filtering needed
+    // here beyond what the query itself returns.
+    const s=await supabase.from("scan_events").select("cat_id,city,region,country,scanned_at").order("scanned_at",{ascending:false});
+    setScans(s.data||[]);
   }
  
   async function login(e){
@@ -118,7 +126,17 @@ export default function Owner(){
   function startEdit(p){
     setEditingId(p.id);
     setForm({name:p.name||"",age:p.age||"",color:p.color||"",temperament:p.temperament||"",health_note:p.health_note||"",contact_phone:p.contact_phone||"",status:p.status,category:p.category||"pet"});
-    setDetailsForm({...(p.details||{})});
+    // Medical's emergency contacts moved from two flat fields to a list —
+    // seed the editor from the new array if present, else fall back to
+    // the old singular fields so anything saved before this change still
+    // shows up for editing instead of silently vanishing.
+    const existingContacts=p.details?.emergency_contacts?.length
+      ? p.details.emergency_contacts
+      : (p.details?.emergency_contact_name||p.details?.emergency_contact_phone)
+        ? [{name:p.details?.emergency_contact_name||"",phone:p.details?.emergency_contact_phone||""}]
+        : [];
+    setDetailsForm({...(p.details||{}),emergency_contacts:existingContacts});
+    setPrivateDetailsForm({...(p.private_details||{})});
     setPhoto(null);
     setMsg("");
   }
@@ -126,6 +144,7 @@ export default function Owner(){
     setEditingId(null);
     setForm(blank);
     setDetailsForm({});
+    setPrivateDetailsForm({});
     setPhoto(null);
   }
  
@@ -133,6 +152,12 @@ export default function Owner(){
     e.preventDefault();
     const details={};
     detailFieldsFor(form.category).forEach(f=>{if(detailsForm[f.key])details[f.key]=detailsForm[f.key];});
+    if(form.category==="medical"){
+      const contacts=(detailsForm.emergency_contacts||[]).filter(c=>c.name||c.phone);
+      if(contacts.length)details.emergency_contacts=contacts;
+    }
+    const private_details={};
+    privateDetailFieldsFor(form.category).forEach(f=>{if(privateDetailsForm[f.key])private_details[f.key]=privateDetailsForm[f.key];});
     let photo_url;
     if(photo){
       const path=session.user.id+"/"+crypto.randomUUID()+"."+photo.name.split(".").pop();
@@ -142,7 +167,7 @@ export default function Owner(){
     }
  
     if(editingId){
-      const patch={...form,details};
+      const patch={...form,details,private_details};
       if(photo_url)patch.photo_url=photo_url;
       const {error}=await supabase.from("cats").update(patch).eq("id",editingId);
       setMsg(error?error.message:"Pet updated.");
@@ -153,12 +178,13 @@ export default function Owner(){
     const {error}=await supabase.from("cats").insert({
       ...form,
       details,
+      private_details,
       photo_url:photo_url||null,
       owner_id:session.user.id,
       public_token:crypto.randomUUID().replaceAll("-","").slice(0,20),
     });
     setMsg(error?error.message:"Item created.");
-    if(!error){setForm(blank);setDetailsForm({});setPhoto(null);load()}
+    if(!error){setForm(blank);setDetailsForm({});setPrivateDetailsForm({});setPhoto(null);load()}
   }
  
   async function qr(p){
@@ -188,6 +214,27 @@ export default function Owner(){
     load();
   }
  
+  // Ownership transfer: the current owner generates a token (a plain
+  // client-side update to their own row, covered by the normal "Owners
+  // update cats" RLS policy), shares the /transfer/{token} link with the
+  // new owner by whatever channel they like, and the new owner accepts it
+  // by signing in and calling accept_transfer() — see the v17 migration.
+  async function startTransfer(p){
+    const token=crypto.randomUUID().replaceAll("-","").slice(0,24);
+    const {error}=await supabase.from("cats").update({transfer_token:token,transfer_created_at:new Date().toISOString()}).eq("id",p.id);
+    if(error){setMsg(error.message);return}
+    load();
+  }
+  async function cancelTransfer(p){
+    const {error}=await supabase.from("cats").update({transfer_token:null,transfer_created_at:null}).eq("id",p.id);
+    if(error){setMsg(error.message);return}
+    load();
+  }
+ 
+  function toggleScans(id){
+    setExpandedScans(prev=>{const next=new Set(prev);next.has(id)?next.delete(id):next.add(id);return next;});
+  }
+ 
   const shownPets=useMemo(()=>categoryFilter==="all"?pets:pets.filter(p=>p.category===categoryFilter),[pets,categoryFilter]);
   // The dashboard title tracks the category filter above the pet list, so
   // picking "Pet" there shows PawPing, "Property" shows StayPing, etc. Stays
@@ -198,6 +245,13 @@ export default function Owner(){
   const byFilter=useMemo(()=>filter==="all"?reports:reports.filter(r=>r.cat_id===filter),[reports,filter]);
   const shown=useMemo(()=>showUnresolvedOnly?byFilter.filter(r=>!r.resolved_at):byFilter,[byFilter,showUnresolvedOnly]);
   const unresolvedCount=useMemo(()=>reports.filter(r=>!r.resolved_at).length,[reports]);
+  const scansByCat=useMemo(()=>{
+    const m={};
+    scans.forEach(s=>{(m[s.cat_id]=m[s.cat_id]||[]).push(s);});
+    return m;
+  },[scans]);
+  const scanCountFor=catId=>(scansByCat[catId]||[]).length;
+  const recentScansFor=(catId,n=5)=>(scansByCat[catId]||[]).slice(0,n);
  
   const stats=[
     [pets.length,"Pets"],
@@ -259,7 +313,27 @@ export default function Owner(){
             <div className="actions"><button onClick={()=>qr(p)}>Download QR</button><button className="secondary" onClick={()=>navigator.clipboard.writeText(url)}>Copy link</button></div>
             <div className="actions"><a className="secondary linkButton" target="_blank" href={`/c/${p.public_token}`}>Open profile</a><a className="secondary linkButton" target="_blank" href={`/poster/${p.public_token}`}>Missing poster</a></div>
             <div className="actions"><a className="secondary linkButton block" target="_blank" href={`/tag/${p.public_token}`}>🏷️ Collar-sized tag (fits a cat)</a></div>
-            <div className="actions"><button className="secondary" onClick={()=>toggle(p)}>Mark {p.status==="safe"?"missing":"safe"}</button><button className="secondary" onClick={()=>startEdit(p)}>Edit</button></div>
+            <div className="actions">
+              <button className={p.status==="missing"?"":"secondary"} onClick={()=>toggle(p)}>{p.status==="safe"?"Mark missing":`🎉 Mark ${p.name} safe`}</button>
+              <button className="secondary" onClick={()=>startEdit(p)}>Edit</button>
+            </div>
+            <div className="scanActivity">
+              <button type="button" className="secondary linkButton" onClick={()=>toggleScans(p.id)}>👁 {scanCountFor(p.id)} scan{scanCountFor(p.id)===1?"":"s"}{expandedScans.has(p.id)?" ▲":" ▼"}</button>
+              {expandedScans.has(p.id)&&<ul className="scanList">
+                {recentScansFor(p.id).map((s,i)=><li key={i}>{[s.city,s.region,s.country].filter(Boolean).join(", ")||"Unknown location"} · {new Date(s.scanned_at).toLocaleString()}</li>)}
+                {!recentScansFor(p.id).length&&<li className="muted">No scans yet.</li>}
+              </ul>}
+            </div>
+            {p.transfer_token
+              ? <div className="transferBox">
+                  <p className="muted" style={{fontSize:12,margin:"4px 0"}}>Pending transfer — share this link with the new owner (expires in 7 days):</p>
+                  <div className="actions">
+                    <button className="secondary" onClick={()=>navigator.clipboard.writeText(location.origin+"/transfer/"+p.transfer_token)}>Copy transfer link</button>
+                    <button className="secondary" onClick={()=>cancelTransfer(p)}>Cancel transfer</button>
+                  </div>
+                </div>
+              : <div className="actions"><button className="secondary block" onClick={()=>startTransfer(p)}>Transfer ownership</button></div>
+            }
             <div className="actions"><button className="danger block" onClick={()=>removePet(p)}>Delete pet</button></div>
           </article>;
         })}</div>
@@ -277,7 +351,20 @@ export default function Owner(){
             </select>
           </>}
           {["name","age","color","temperament","health_note"].map(k=><div key={k}><label>{k.replace("_"," ")}</label><input required={k==="name"} value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})}/></div>)}
-          {isBeta&&detailFieldsFor(form.category).map(f=><div key={f.key}><label>{f.label}</label><input placeholder={f.placeholder||""} value={detailsForm[f.key]||""} onChange={e=>setDetailsForm({...detailsForm,[f.key]:e.target.value})}/></div>)}
+          {isBeta&&detailFieldsFor(form.category).map(f=><div key={f.key}><label>{f.label}</label>{f.multiline?<textarea placeholder={f.placeholder||""} value={detailsForm[f.key]||""} onChange={e=>setDetailsForm({...detailsForm,[f.key]:e.target.value})}/>:<input placeholder={f.placeholder||""} value={detailsForm[f.key]||""} onChange={e=>setDetailsForm({...detailsForm,[f.key]:e.target.value})}/>}</div>)}
+          {isBeta&&form.category==="medical"&&<div className="contactsEditor">
+            <label>Emergency contacts</label>
+            {(detailsForm.emergency_contacts||[]).map((c,i)=><div className="contactRow" key={i}>
+              <input placeholder="Name" value={c.name||""} onChange={e=>setDetailsForm({...detailsForm,emergency_contacts:(detailsForm.emergency_contacts||[]).map((x,idx)=>idx===i?{...x,name:e.target.value}:x)})}/>
+              <input placeholder="Phone" value={c.phone||""} onChange={e=>setDetailsForm({...detailsForm,emergency_contacts:(detailsForm.emergency_contacts||[]).map((x,idx)=>idx===i?{...x,phone:e.target.value}:x)})}/>
+              <button type="button" className="secondary" onClick={()=>setDetailsForm({...detailsForm,emergency_contacts:(detailsForm.emergency_contacts||[]).filter((_,idx)=>idx!==i)})}>Remove</button>
+            </div>)}
+            <button type="button" className="secondary" onClick={()=>setDetailsForm({...detailsForm,emergency_contacts:[...(detailsForm.emergency_contacts||[]),{name:"",phone:""}]})}>+ Add contact</button>
+          </div>}
+          {isBeta&&privateDetailFieldsFor(form.category).length>0&&<>
+            <label className="privateFieldsLabel">🔒 Private — never shown to a finder</label>
+            {privateDetailFieldsFor(form.category).map(f=><div key={f.key}><label>{f.label}</label><input placeholder={f.placeholder||""} value={privateDetailsForm[f.key]||""} onChange={e=>setPrivateDetailsForm({...privateDetailsForm,[f.key]:e.target.value})}/></div>)}
+          </>}
           <label>Your phone (private, optional)</label>
           <input type="tel" placeholder="Kept for your own reference only — never shown to finders" value={form.contact_phone} onChange={e=>setForm({...form,contact_phone:e.target.value})}/>
           <label>Photo{editingId?" (leave empty to keep current)":""}</label>
@@ -318,4 +405,3 @@ export default function Owner(){
     </section>}
   </main>;
 }
- 

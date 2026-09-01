@@ -45,3 +45,29 @@ test("shows a plain no-details message when nothing has been filled in", async (
   await expect(page.getByText("No additional details have been added yet.")).toBeVisible();
   await expect(page.getByRole("link", {name: /Call emergency contact/})).toHaveCount(0);
 });
+
+test("renders one call button per emergency contact when multiple are set", async ({page}) => {
+  await mockPublicItem(page, {
+    name: "Alex Rivera",
+    category: "medical",
+    details: {
+      emergency_contacts: [
+        {name: "Jordan Rivera", phone: "+15551234567"},
+        {name: "Sam Rivera", phone: "+15559876543"},
+      ],
+      physician_name: "Dr. Chen",
+      physician_phone: "+15550001111",
+    },
+  });
+
+  await page.goto("/c/mock-token");
+
+  await expect(page.getByRole("link", {name: /Call emergency contact — Jordan Rivera/})).toHaveAttribute("href", "tel:+15551234567");
+  await expect(page.getByRole("link", {name: /Call emergency contact — Sam Rivera/})).toHaveAttribute("href", "tel:+15559876543");
+
+  // A physician's phone number in the plain info list is also a clickable
+  // tel: link, not just static text.
+  const physicianPhone = page.getByRole("link", {name: "+15550001111"});
+  await expect(physicianPhone).toHaveAttribute("href", "tel:+15550001111");
+  await expect(page.getByText("Dr. Chen")).toBeVisible();
+});

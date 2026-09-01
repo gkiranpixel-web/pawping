@@ -54,3 +54,39 @@ test("shows a clear message for an unknown token", async ({page}) => {
 
   await expect(page.getByRole("heading", {name: "Not found"})).toBeVisible();
 });
+
+test("shows behavior/drop-off notes and a reward only while an item is missing, not once it's safe", async ({page}) => {
+  await mockPublicItem(page, {
+    name: "Bike",
+    category: "item",
+    status: "missing",
+    is_owner_beta: true,
+    details: {
+      dropoff_note: "Leave with the front desk at 123 Main St",
+      reward_note: "$50 reward, no questions asked",
+    },
+  });
+
+  await page.goto("/c/mock-token");
+
+  await expect(page.getByText("Leave with the front desk at 123 Main St")).toBeVisible();
+  await expect(page.getByText("$50 reward, no questions asked")).toBeVisible();
+});
+
+test("hides the reward and drop-off note once the item is marked safe", async ({page}) => {
+  await mockPublicItem(page, {
+    name: "Bike",
+    category: "item",
+    status: "safe",
+    is_owner_beta: true,
+    details: {
+      dropoff_note: "Leave with the front desk at 123 Main St",
+      reward_note: "$50 reward, no questions asked",
+    },
+  });
+
+  await page.goto("/c/mock-token");
+
+  await expect(page.getByText("Leave with the front desk at 123 Main St")).toHaveCount(0);
+  await expect(page.getByText("$50 reward, no questions asked")).toHaveCount(0);
+});

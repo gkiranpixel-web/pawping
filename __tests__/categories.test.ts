@@ -4,6 +4,7 @@ import {
   categoryList,
   detailFieldsFor,
   getCategory,
+  privateDetailFieldsFor,
   readField,
 } from "../lib/categories";
 
@@ -80,6 +81,40 @@ describe("category shape", () => {
       }
     }
   });
+
+  // property gets a single "call maintenance/host" button instead of a
+  // plain info row for its contact — different shape from medical's
+  // multi-contact list, so it's configured, not hardcoded in the page.
+  it("gives property a contactButton wired to its maintenance contact fields", () => {
+    const cb = CATEGORIES.property.contactButton;
+    expect(cb?.phoneKey).toBe("maintenance_contact_phone");
+    expect(cb?.nameKey).toBe("maintenance_contact_name");
+    expect(cb?.labelKey).toBeTruthy();
+    expect(cb?.namedLabelKey).toBeTruthy();
+  });
+
+  // Security regression test: PRIVATE_DETAIL_FIELDS exists precisely so an
+  // owner-only value (e.g. an item's serial number) never ends up
+  // somewhere a finder's browser receives it — get_public_item selects
+  // `details` in full but never `private_details` (see the v17
+  // migration). A private field key that also appears in the *same*
+  // category's DETAIL_FIELDS, facts, or infoFields would defeat that: it'd
+  // get saved into `details` (or read as if it were public) instead of
+  // staying in `private_details`. This asserts that never happens.
+  for (const [key, cat] of Object.entries(CATEGORIES)) {
+    it(`never exposes a ${key} private field key as a public one`, () => {
+      const privateKeys = new Set(privateDetailFieldsFor(key).map(f => f.key));
+      if (!privateKeys.size) return;
+      const publicKeys = new Set([
+        ...detailFieldsFor(key).map(f => f.key),
+        ...(cat.facts || []).map(f => f.key),
+        ...(cat.infoFields || []).map(f => f.key),
+      ]);
+      for (const k of privateKeys) {
+        expect(publicKeys.has(k), `${key}.${k} is both private and public`).toBe(false);
+      }
+    });
+  }
 });
 
 describe("readField", () => {
@@ -103,11 +138,36 @@ describe("detailFieldsFor", () => {
   it("returns the owner-editable fields for a known category", () => {
     const fields = detailFieldsFor("medical").map(f => f.key);
     expect(fields).toContain("blood_type");
-    expect(fields).toContain("emergency_contact_phone");
+    expect(fields).toContain("physician_phone");
+    // Medical's emergency contacts moved to a dynamic list (owner.js's
+    // ContactsEditor), saved as details.emergency_contacts — not a flat
+    // DETAIL_FIELDS entry, so it should NOT appear here.
+    expect(fields).not.toContain("emergency_contact_phone");
+  });
+
+  it("includes the newly added per-category fields", () => {
+    expect(detailFieldsFor("pet").map(f => f.key)).toContain("behavior_note");
+    expect(detailFieldsFor("item").map(f => f.key)).toContain("dropoff_note");
+    expect(detailFieldsFor("property").map(f => f.key)).toEqual(
+      expect.arrayContaining(["welcome_guide", "checkout_time", "maintenance_contact_name", "maintenance_contact_phone"])
+    );
   });
 
   it("returns an empty array for an unknown or missing category", () => {
     expect(detailFieldsFor("dinosaur")).toEqual([]);
     expect(detailFieldsFor(undefined)).toEqual([]);
+  });
+});
+
+describe("privateDetailFieldsFor", () => {
+  it("returns item's serial number as a private-only field", () => {
+    const fields = privateDetailFieldsFor("item");
+    expect(fields.map(f => f.key)).toContain("serial_number");
+  });
+
+  it("returns an empty array for categories with no private fields, or an unknown category", () => {
+    expect(privateDetailFieldsFor("pet")).toEqual([]);
+    expect(privateDetailFieldsFor("dinosaur")).toEqual([]);
+    expect(privateDetailFieldsFor(undefined)).toEqual([]);
   });
 });

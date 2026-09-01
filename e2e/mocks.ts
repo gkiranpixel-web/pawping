@@ -13,7 +13,7 @@ export interface MockItem {
   health_note?: string | null;
   status?: "safe" | "missing";
   category: "pet" | "item" | "property" | "medical";
-  details?: Record<string, string> | null;
+  details?: Record<string, unknown> | null;
   created_at?: string;
   is_owner_beta?: boolean;
 }

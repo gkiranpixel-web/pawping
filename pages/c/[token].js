@@ -55,6 +55,15 @@ export default function Item(){
     })();
   },[query.token]);
 
+  // A lightweight, anonymous scan log (city-level only, no IP stored) so
+  // the owner gets a rough sense of where/when their tag gets scanned.
+  // Fires once per page load for every category, not just findable ones —
+  // best-effort, never blocks or affects what the finder sees.
+  useEffect(()=>{
+    if(!query.token)return;
+    fetch("/api/scan",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token:query.token})}).catch(()=>{});
+  },[query.token]);
+
   function submit(){
     if(!navigator.geolocation){setResult(t("ui.locationNotSupported"));return}
     setBusy(true);
@@ -107,7 +116,12 @@ export default function Item(){
         {category.facts.map(f=><div key={f.key}><small>{t(f.labelKey)}</small><strong>{readField(item,f)||"—"}</strong></div>)}
       </div>
       {item.health_note&&<p className="notice"><b>{t("ui.important")}</b> {item.health_note}</p>}
-      {item.is_owner_beta&&item.details?.reward_note&&<p className="reward">🎁 {item.details.reward_note}</p>}
+      {/* Behavior/drop-off notes and a reward only make sense while the
+          item is actually away from its owner — gated to status "missing"
+          so a returned/safe item doesn't keep advertising a reward. */}
+      {item.is_owner_beta&&item.status==="missing"&&item.details?.behavior_note&&<p className="notice">📋 {item.details.behavior_note}</p>}
+      {item.is_owner_beta&&item.status==="missing"&&item.details?.dropoff_note&&<p className="notice">📦 {item.details.dropoff_note}</p>}
+      {item.is_owner_beta&&item.status==="missing"&&item.details?.reward_note&&<p className="reward">🎁 {item.details.reward_note}</p>}
       <p className="tone">{t(copy.toneKey)}</p>
 
       {!showForm&&<button className="secondary block" onClick={()=>setShowForm(true)}>{t("ui.somethingWrong")}</button>}
@@ -136,14 +150,29 @@ export default function Item(){
 
 // Informational categories (medical ID, property/rental tags) don't have
 // anything to "find" — there's no report form, no geolocation. The scan
-// just shows curated info from `details`. Medical additionally surfaces an
-// emergency-contact call button: the one deliberate exception to "never
-// show contact info to a finder," because the whole point of a medical ID
-// is that a first responder needs a real number immediately.
+// just shows curated info from `details`. Medical additionally surfaces
+// one or more emergency-contact call buttons — the deliberate exception
+// to "never show contact info to a finder," because the whole point of a
+// medical ID is that a first responder needs a real number immediately.
+// Property gets an analogous single maintenance/host contact button via
+// `category.contactButton`, for the same reason on a smaller scale (a
+// guest with a real issue needs a number, not a masked report form).
 function InfoPage({item,category,t,locale,setLocale}){
   const fields=category.infoFields.map(f=>({...f,value:readField(item,f)})).filter(f=>f.value);
-  const emergencyName=item.details?.emergency_contact_name;
-  const emergencyPhone=item.details?.emergency_contact_phone;
+
+  // Backward-compatible with data saved before medical moved from two flat
+  // fields to a list — falls back to the old singular fields if no array
+  // is present, so nothing saved earlier stops showing a call button.
+  const emergencyContacts=(item.details?.emergency_contacts?.length
+    ? item.details.emergency_contacts
+    : (item.details?.emergency_contact_name||item.details?.emergency_contact_phone)
+      ? [{name:item.details?.emergency_contact_name,phone:item.details?.emergency_contact_phone}]
+      : []
+  ).filter(c=>c?.phone);
+
+  const cb=category.contactButton;
+  const cbPhone=cb&&item.details?.[cb.phoneKey];
+  const cbName=cb&&cb.nameKey&&item.details?.[cb.nameKey];
 
   return <main className="shell">
     <div className="langRow"><LanguageSwitcher locale={locale} setLocale={setLocale}/></div>
@@ -154,12 +183,14 @@ function InfoPage({item,category,t,locale,setLocale}){
       <p className="eyebrow">{t(category.infoEyebrowKey)}</p>
       <h1>{item.name}</h1>
 
-      {category.medicalEmergency&&emergencyPhone&&<a className="primary block" href={`tel:${emergencyPhone}`}>{emergencyName?t("ui.callEmergencyNamed",{name:emergencyName}):t("ui.callEmergency")}</a>}
+      {category.medicalEmergency&&emergencyContacts.map((c,i)=><a key={i} className={i===0?"primary block":"secondary block"} href={`tel:${c.phone}`}>{c.name?t("ui.callEmergencyNamed",{name:c.name}):t("ui.callEmergency")}</a>)}
+
+      {cbPhone&&<a className="primary block" href={`tel:${cbPhone}`}>{cbName?t(cb.namedLabelKey,{name:cbName}):t(cb.labelKey)}</a>}
 
       {item.health_note&&<p className="notice"><b>{t("ui.important")}</b> {item.health_note}</p>}
 
       {fields.length>0&&<div className="facts" style={{gridTemplateColumns:"1fr"}}>
-        {fields.map(f=><div key={f.key}><small>{t(f.labelKey)}</small><strong>{f.value}</strong></div>)}
+        {fields.map(f=><div key={f.key}><small>{t(f.labelKey)}</small><strong>{f.key.endsWith("_phone")?<a href={`tel:${f.value}`}>{f.value}</a>:f.value}</strong></div>)}
       </div>}
 
       {!fields.length&&!item.health_note&&<p className="muted">{t("ui.noDetails")}</p>}

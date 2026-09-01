@@ -27,6 +27,48 @@ The version shown in the footer of every page (bottom of the screen) always matc
 `package.json`, so a mismatch between what you see live and what's in this file means
 the latest deploy hasn't gone out yet.
 
+## 0.8.0
+
+- A round of category features, one per category:
+  - **Pets**: behavior/handling notes for a finder (e.g. "nervous around
+    strangers"), a friendlier "Mark {name} safe" button when a pet is
+    missing, and ownership transfer — generate a one-time link
+    (`/transfer/{token}`, valid 7 days) to hand a tag to a new owner
+    without reprinting it.
+  - **Items**: a no-contact drop-off option, and a private serial number /
+    proof-of-ownership field. Private fields are a new thing: they save to
+    a `private_details` column that `get_public_item` never selects, so —
+    unlike the existing `details` field, which a finder's browser receives
+    in full and the page just chooses what to render — this one never
+    leaves the server for a public request.
+  - **Property/rental**: a welcome guide, checkout time, and a maintenance/
+    host contact with its own "tap to call" button (the same deliberate
+    exception to "never show contact info to a finder" that medical IDs
+    already use, extended to a second category).
+  - **Medical ID**: multiple emergency contacts (was one fixed field, now
+    a list — old single-contact data still displays via a fallback), a
+    named physician contact, and a proper multi-line field for medications
+    and dosage.
+  - **All categories**: a lightweight, anonymous scan log — city/region/
+    country and a timestamp per scan, no IP address stored, backed by
+    Vercel's free edge geo headers (no external service, no cost). Visible
+    per pet on the owner dashboard as an expandable "N scans" list.
+  - The reward note (existing) now only shows while an item is actually
+    marked missing, instead of always.
+- New `accept_transfer()` database function for the transfer flow above.
+  Caught and fixed a real bug in it before it reached production: this
+  Supabase project grants function EXECUTE to `anon` by default, so
+  without an explicit signed-in check, an unauthenticated caller could
+  have nulled out a cat's owner_id using nothing but a valid (or guessed)
+  transfer link. Fixed with an explicit auth check plus a tightened grant
+  — verified via the security advisor on staging before it ever touched
+  production.
+- Also fixed a small pre-existing data bug found while adding new i18n
+  keys: the Hindi "brand / model" label had a corrupted character from an
+  earlier edit.
+- Schema applied to staging first, then production, per the usual
+  workflow — see supabase/migrations/20260901000400_v17_category_feature_expansion.sql.
+
 ## 0.7.7
 
 - Added an in-app features page (`/features`) — a short marketing flyer

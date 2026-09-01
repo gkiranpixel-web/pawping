@@ -25,3 +25,7 @@ button:disabled{opacity:.6;cursor:not-allowed;filter:none}
 .langRow{display:flex;justify-content:flex-end;margin-bottom:8px}
 .langSwitcher{width:auto;padding:8px 10px;font-size:12px;border-radius:20px}
 .featureGrid{grid-template-columns:1fr 1fr}.featureCard{background:#f2f5f3;padding:16px;border-radius:14px}.featureCard b{display:block;margin-bottom:4px}.featureCard span{font-size:13px;color:#687970}.featureIcon{font-size:26px;display:block;margin-bottom:8px}.comingSoon{background:transparent;border:2px dashed #ccd6d0}.comingSoonPill{display:inline-block;background:#fdecd2;color:#8a5a00;font-size:11px;font-weight:bold;letter-spacing:.5px;padding:3px 10px;border-radius:20px;text-transform:uppercase;margin-bottom:8px}
+.contactsEditor{margin-top:8px}.contactRow{display:flex;gap:8px;margin-bottom:8px}.contactRow input{flex:1}.contactRow button{flex:none}
+.privateFieldsLabel{margin-top:18px;padding-top:12px;border-top:1px dashed #ccd6d0}
+.scanActivity{margin-top:10px}.scanList{list-style:none;padding:0;margin:8px 0 0;display:grid;gap:6px;font-size:13px;color:#687970}.scanList li{background:#f2f5f3;padding:8px 10px;border-radius:10px}
+.transferBox{margin-top:10px;padding:12px;background:#f2f5f3;border-radius:12px}
