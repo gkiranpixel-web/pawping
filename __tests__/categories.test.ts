@@ -2,6 +2,7 @@ import {describe, expect, it} from "vitest";
 import {
   CATEGORIES,
   categoryList,
+  coreFieldsFor,
   detailFieldsFor,
   getCategory,
   privateDetailFieldsFor,
@@ -169,5 +170,46 @@ describe("privateDetailFieldsFor", () => {
     expect(privateDetailFieldsFor("pet")).toEqual([]);
     expect(privateDetailFieldsFor("dinosaur")).toEqual([]);
     expect(privateDetailFieldsFor(undefined)).toEqual([]);
+  });
+});
+
+
+describe("coreFieldsFor", () => {
+  // Regression test for a reported bug: the owner dashboard's add/edit
+  // form always rendered age/color/temperament/health_note as plain,
+  // pet-labeled inputs regardless of the selected category — including
+  // for property and medical, where none of age/color/temperament are
+  // ever read by the public page (see pages/c/[token].js's InfoPage,
+  // which only reads name/health_note/details — never item.age/color/
+  // temperament). coreFieldsFor is what the form now reads instead.
+  it("gives pet the full set: color, age, temperament, health_note", () => {
+    expect(coreFieldsFor("pet").map(f => f.key)).toEqual(["color", "age", "temperament", "health_note"]);
+  });
+
+  it("gives item color/temperament/health_note but not age (never shown for item)", () => {
+    const keys = coreFieldsFor("item").map(f => f.key);
+    expect(keys).toEqual(["color", "temperament", "health_note"]);
+    expect(keys).not.toContain("age");
+  });
+
+  it("gives informational categories (property, medical) only health_note", () => {
+    for (const key of ["property", "medical"] as const) {
+      expect(coreFieldsFor(key).map(f => f.key), key).toEqual(["health_note"]);
+    }
+  });
+
+  it("gives every category's health_note field a non-pet-specific label", () => {
+    for (const key of Object.keys(CATEGORIES) as (keyof typeof CATEGORIES)[]) {
+      const field = coreFieldsFor(key).find(f => f.key === "health_note");
+      expect(field?.label, `${key}.health_note.label`).toBeTruthy();
+      if (key !== "pet") {
+        expect(field?.label.toLowerCase(), `${key}.health_note.label`).not.toContain("health");
+      }
+    }
+  });
+
+  it("returns an empty array for an unknown or missing category", () => {
+    expect(coreFieldsFor("dinosaur")).toEqual([]);
+    expect(coreFieldsFor(undefined)).toEqual([]);
   });
 });

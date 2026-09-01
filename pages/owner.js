@@ -2,7 +2,7 @@ import {useEffect,useMemo,useState} from "react";
 import Link from "next/link";
 import QRCode from "qrcode";
 import {supabase,ready} from "../lib/supabase";
-import {getCategory,categoryList,detailFieldsFor,privateDetailFieldsFor} from "../lib/categories";
+import {getCategory,categoryList,coreFieldsFor,detailFieldsFor,privateDetailFieldsFor} from "../lib/categories";
  
 const blank={name:"",age:"",color:"",temperament:"",health_note:"",contact_phone:"",status:"safe",category:"pet"};
  
@@ -242,6 +242,11 @@ export default function Owner(){
   // filter dropdown itself is beta-gated, so categoryFilter never leaves
   // "all" for a non-beta owner).
   const dashboardBrand=categoryFilter==="all"?"TagPing":getCategory(categoryFilter).brand;
+  // The add/edit form (aside, below) reads this to pick its fields,
+  // labels, and heading for whatever category is currently selected in
+  // the form itself — not the dashboard's categoryFilter above, a
+  // separate, unrelated dropdown.
+  const category=getCategory(form.category);
   const byFilter=useMemo(()=>filter==="all"?reports:reports.filter(r=>r.cat_id===filter),[reports,filter]);
   const shown=useMemo(()=>showUnresolvedOnly?byFilter.filter(r=>!r.resolved_at):byFilter,[byFilter,showUnresolvedOnly]);
   const unresolvedCount=useMemo(()=>reports.filter(r=>!r.resolved_at).length,[reports]);
@@ -342,7 +347,12 @@ export default function Owner(){
       </section>
  
       <aside className="card">
-        <h2>{editingId?"Edit pet":"Add pet"}</h2>
+        {/* The add/edit form's fields, labels, and heading all follow the
+            currently-selected category — not just the category-specific
+            DETAIL_FIELDS below, but the "core" cats columns too (age,
+            color, temperament, health_note), which used to always show
+            pet-labeled inputs no matter what category was picked. */}
+        <h2>{editingId?`Edit ${category.itemNoun}`:`Add ${category.itemNoun}`}</h2>
         <form onSubmit={save}>
           {isBeta&&<>
             <label>Category</label>
@@ -350,7 +360,8 @@ export default function Owner(){
               {categoryList().map(c=><option key={c.value} value={c.value}>{c.label}</option>)}
             </select>
           </>}
-          {["name","age","color","temperament","health_note"].map(k=><div key={k}><label>{k.replace("_"," ")}</label><input required={k==="name"} value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})}/></div>)}
+          <div><label>Name</label><input required value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/></div>
+          {coreFieldsFor(form.category).map(f=><div key={f.key}><label>{f.label}</label><input placeholder={f.placeholder||""} value={form[f.key]} onChange={e=>setForm({...form,[f.key]:e.target.value})}/></div>)}
           {isBeta&&detailFieldsFor(form.category).map(f=><div key={f.key}><label>{f.label}</label>{f.multiline?<textarea placeholder={f.placeholder||""} value={detailsForm[f.key]||""} onChange={e=>setDetailsForm({...detailsForm,[f.key]:e.target.value})}/>:<input placeholder={f.placeholder||""} value={detailsForm[f.key]||""} onChange={e=>setDetailsForm({...detailsForm,[f.key]:e.target.value})}/>}</div>)}
           {isBeta&&form.category==="medical"&&<div className="contactsEditor">
             <label>Emergency contacts</label>
@@ -369,9 +380,11 @@ export default function Owner(){
           <input type="tel" placeholder="Kept for your own reference only — never shown to finders" value={form.contact_phone} onChange={e=>setForm({...form,contact_phone:e.target.value})}/>
           <label>Photo{editingId?" (leave empty to keep current)":""}</label>
           <input type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>setPhoto(e.target.files?.[0])}/>
-          <label>Status</label>
-          <select value={form.status} onChange={e=>setForm({...form,status:e.target.value})}><option value="safe">Safe</option><option value="missing">Missing</option></select>
-          <div className="actions"><button>{editingId?"Save changes":"Create pet"}</button>{editingId&&<button type="button" className="secondary" onClick={cancelEdit}>Cancel</button>}</div>
+          {category.hasReportFlow&&<>
+            <label>Status</label>
+            <select value={form.status} onChange={e=>setForm({...form,status:e.target.value})}><option value="safe">Safe</option><option value="missing">Missing</option></select>
+          </>}
+          <div className="actions"><button>{editingId?"Save changes":`Create ${category.itemNoun}`}</button>{editingId&&<button type="button" className="secondary" onClick={cancelEdit}>Cancel</button>}</div>
         </form>
       </aside>
     </div>}

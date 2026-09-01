@@ -27,6 +27,28 @@ The version shown in the footer of every page (bottom of the screen) always matc
 `package.json`, so a mismatch between what you see live and what's in this file means
 the latest deploy hasn't gone out yet.
 
+## 0.8.2
+
+- Fixed a real bug reported by GK: the "add/edit" form on the owner
+  dashboard always showed age/color/temperament/health note as
+  pet-labeled inputs, no matter which category was selected — so adding
+  a key, a rental tag, or a medical ID still asked for a pet's
+  "temperament." Those fields are now category-aware (`coreFieldsFor` in
+  lib/categories.ts):
+  - Pet: color, age, temperament, health note (unchanged).
+  - Item: color, a finder note, and an important note — no age, which
+    was never actually shown anywhere for an item.
+  - Property and medical: just one field, relabeled "Important note" —
+    the only one of the four ever rendered on their info pages; age,
+    color, and temperament were dead inputs for these two categories.
+  - The form's heading and submit button also now say "Add pet" /
+    "Add item" / "Add property tag" / "Add medical ID" instead of always
+    "Add pet," and the Safe/Missing status toggle — meaningless for an
+    informational category — only shows for pet/item.
+- No schema change and no data migration: existing rows are untouched,
+  this only changes which inputs the form shows.
+- +5 unit tests (42 total) covering the new field set per category.
+
 ## 0.8.1
 
 - Caught up the in-app marketing flyer (`/features`) and Help/FAQ page to

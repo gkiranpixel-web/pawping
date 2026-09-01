@@ -49,6 +49,10 @@ export interface Category {
   // familiar PawPing name a finder is more likely to trust/recognize,
   // while other categories get a name that fits them specifically.
   brand: string;
+  // Short, lowercase noun for the "Add {noun}" / "Edit {noun}" form
+  // heading and button — distinct from `label` (verbose, for the
+  // category picker) and `brand` (the public-facing product name).
+  itemNoun: string;
   medicalEmergency?: boolean;
   contactButton?: ContactButtonSpec;
   facts?: FieldSpec[];
@@ -83,6 +87,7 @@ export const CATEGORIES: Record<CategoryKey, Category> = {
     icon: "🐈",
     hasReportFlow: true,
     brand: "PawPing",
+    itemNoun: "pet",
     facts: [
       {key: "color", labelKey: "facts.color", source: "field"},
       {key: "age", labelKey: "facts.age", source: "field"},
@@ -97,6 +102,7 @@ export const CATEGORIES: Record<CategoryKey, Category> = {
     icon: "🎒",
     hasReportFlow: true,
     brand: "TagPing",
+    itemNoun: "item",
     facts: [
       {key: "color", labelKey: "facts.color", source: "field"},
       {key: "brand", labelKey: "facts.brand", source: "details"},
@@ -112,6 +118,7 @@ export const CATEGORIES: Record<CategoryKey, Category> = {
     hasReportFlow: false,
     medicalEmergency: false,
     brand: "StayPing",
+    itemNoun: "property tag",
     infoEyebrowKey: "property.infoEyebrow",
     contactButton: {
       phoneKey: "maintenance_contact_phone",
@@ -134,6 +141,7 @@ export const CATEGORIES: Record<CategoryKey, Category> = {
     hasReportFlow: false,
     medicalEmergency: true,
     brand: "VitalPing",
+    itemNoun: "medical ID",
     infoEyebrowKey: "medical.infoEyebrow",
     infoFields: [
       {key: "blood_type", labelKey: "fields.bloodType", source: "details"},
@@ -159,6 +167,48 @@ export function categoryList(): {value: CategoryKey; label: string}[] {
 export function readField(row: Partial<PublicItemRow> | null | undefined, spec: FieldSpec): string | undefined {
   if (spec.source === "details") return row?.details?.[spec.key] as string | undefined;
   return (row as Record<string, unknown> | null | undefined)?.[spec.key] as string | undefined;
+}
+
+// The "core" fields — real columns on `cats`, not `details` — that the
+// add/edit form on the dashboard shows above the category-specific
+// DETAIL_FIELDS. Which of these actually mean anything to a finder
+// depends on the category: `temperament` and `age` only ever get
+// rendered for a findable category's facts/muted line (see
+// pages/c/[token].js), and never for an informational one (property,
+// medical use InfoPage, which never reads item.age/color/temperament at
+// all) — so those show as *pet-labeled inputs with no effect* if a
+// non-findable category's form doesn't hide them. `health_note` is the
+// one core field every category actually uses (rendered as an "Important:"
+// notice on both page shapes), so it stays everywhere but with a label
+// that fits — "Health note" reads oddly on a property tag.
+export interface CoreFieldSpec {
+  key: "age" | "color" | "temperament" | "health_note";
+  label: string;
+  placeholder?: string;
+}
+
+export const CORE_FIELDS: Record<CategoryKey, CoreFieldSpec[]> = {
+  pet: [
+    {key:"color", label:"Color"},
+    {key:"age", label:"Age"},
+    {key:"temperament", label:"Temperament", placeholder:"e.g. Friendly, a bit shy with strangers"},
+    {key:"health_note", label:"Health note", placeholder:"Shown to a finder as an important note, e.g. needs medication"},
+  ],
+  item: [
+    {key:"color", label:"Color"},
+    {key:"temperament", label:"Note for a finder", placeholder:"e.g. Slightly worn, has a keychain charm attached"},
+    {key:"health_note", label:"Important note", placeholder:"Shown to a finder as an important note"},
+  ],
+  property: [
+    {key:"health_note", label:"Important note", placeholder:"Shown to a guest as an important note, e.g. gate code changes weekly"},
+  ],
+  medical: [
+    {key:"health_note", label:"Important note", placeholder:"Shown alongside the medical info, e.g. non-verbal, carries an EpiPen"},
+  ],
+};
+
+export function coreFieldsFor(categoryKey?: string | null): CoreFieldSpec[] {
+  return (categoryKey && CORE_FIELDS[categoryKey as CategoryKey]) || [];
 }
 
 export interface DetailFieldSpec {
