@@ -21,6 +21,14 @@ const PLATFORM_FEATURES = [
   {icon: "📲", title: "Installs like an app", body: "Add it to your home screen — works like a native app, no App Store, no update to wait for."},
 ];
 
+const RECENTLY_ADDED = [
+  {icon: "🔄", title: "Ownership transfer", body: "Rehoming a pet? Generate a one-time link and hand off the tag to its new owner — no reprinting."},
+  {icon: "🔒", title: "Private serial number", body: "Keep a proof-of-ownership record on an item that's never shown to a finder, even in the fine print."},
+  {icon: "📖", title: "Welcome guide & host contact", body: "Rental tags can now include a welcome guide, checkout time, and a one-tap maintenance/host call button."},
+  {icon: "⛑️", title: "Multiple emergency contacts", body: "Medical IDs support more than one contact, plus a named physician — not just one fixed number."},
+  {icon: "👁", title: "Scan activity", body: "See a rough log of when and where your tag gets scanned — city-level only, no IP address ever stored."},
+];
+
 const COMING_SOON = [
   {icon: "📍", title: "GPS live tracking", body: "Real-time location for pets wearing a tracker — not just where they were found, but where they are right now."},
 ];
@@ -49,6 +57,17 @@ export default function Features(){
       <p className="eyebrow">BUILT IN, NO EXTRA SETUP</p>
       <div className="featureGrid" style={{marginTop:12}}>
         {PLATFORM_FEATURES.map(f=><div className="featureCard" key={f.title}>
+          <span className="featureIcon">{f.icon}</span>
+          <b>{f.title}</b>
+          <span>{f.body}</span>
+        </div>)}
+      </div>
+    </section>
+
+    <section className="card" style={{marginTop:18}}>
+      <p className="eyebrow">JUST ADDED</p>
+      <div className="featureGrid" style={{marginTop:12}}>
+        {RECENTLY_ADDED.map(f=><div className="featureCard" key={f.title}>
           <span className="featureIcon">{f.icon}</span>
           <b>{f.title}</b>
           <span>{f.body}</span>

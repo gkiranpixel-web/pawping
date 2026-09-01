@@ -27,6 +27,22 @@ The version shown in the footer of every page (bottom of the screen) always matc
 `package.json`, so a mismatch between what you see live and what's in this file means
 the latest deploy hasn't gone out yet.
 
+## 0.8.1
+
+- Caught up the in-app marketing flyer (`/features`) and Help/FAQ page to
+  the 0.8.0 category feature expansion, which had shipped without either
+  being updated:
+  - Features page gets a new "Just added" section: ownership transfer,
+    the private serial number field, welcome guide & host contact for
+    rentals, multiple emergency contacts for medical IDs, and the new
+    scan-activity log.
+  - Help page gets two new FAQ entries: how to transfer a pet to a new
+    owner, and what the scan-activity log on the dashboard shows.
+- No NFC-related code — confirmed there's nothing to add. Physical NFC
+  tags need only be written with the same public URL a QR code already
+  encodes; the browser handles the rest natively. That's a hardware step,
+  not an app feature.
+
 ## 0.8.0
 
 - A round of category features, one per category:

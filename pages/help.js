@@ -14,6 +14,8 @@ const FAQ=[
   {q:"Is the location a finder shares exact?",a:"Yes, but only after the finder explicitly grants location permission, and only you (the owner) can see it — never anyone else."},
   {q:"What if I have more than one pet?",a:"Add as many as you like — each gets its own QR tag, profile, and sighting history, all in one dashboard."},
   {q:"The QR download is too big for a collar — what do I use instead?",a:"Open a pet's \"🏷️ Collar-sized tag\" link instead of the plain QR download. It prints at a real physical size (25mm for cats, 35mm or 45mm for dogs or a carrier) so you can cut it out and laminate it or slip it into a tag pouch, rather than shrinking a poster-sized QR code by eye."},
+  {q:"How do I transfer a pet to a new owner?",a:"On the pet's card, tap \"Transfer ownership\" to generate a one-time link, then share it with the new owner however you like (text, email, etc). It's valid for 7 days. Once they sign in and accept it, the tag moves to their account — you can cancel the pending transfer from the same card any time before then."},
+  {q:"What is \"scan activity\" on my dashboard?",a:"A rough log of when and where your tag gets scanned — city/region/country and a timestamp, shown under each pet's card. No IP address or anything that identifies the finder is ever stored, in keeping with the same privacy-first approach as the rest of the app."},
 ];
 
 export default function Help(){
