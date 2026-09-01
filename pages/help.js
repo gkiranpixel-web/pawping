@@ -1,14 +1,14 @@
 import Link from "next/link";
 
 const STEPS=[
-  {n:"1",title:"Add your pet",body:"Sign in with just your email, add your pet's name and photo, and PawPing generates a unique QR tag for them."},
+  {n:"1",title:"Add your pet",body:"Sign in with just your email, add your pet's name and photo, and TagPing generates a unique QR tag for them."},
   {n:"2",title:"Attach the tag",body:"Print the QR code and attach it to a collar tag, clip, or engraved plate — no app install needed for anyone who finds them."},
   {n:"3",title:"Get notified instantly",body:"If your pet wanders off, whoever finds them scans the tag, shares a location, and you're alerted right away."},
 ];
 
 const FAQ=[
-  {q:"How do I turn on sighting alerts?",a:"On your dashboard, tap \"🔔 Enable alerts\" once and allow the browser's notification permission. On iPhone, this only works after you've added PawPing to your Home Screen first (tap Share in Safari, then \"Add to Home Screen\") — that's an Apple restriction, not a PawPing limitation."},
-  {q:"What does a finder see when they scan my pet's tag?",a:"Only what you chose to share: name, photo, color, age, and any note — never your email or exact address. If you added a contact phone number, they'll also see a one-tap call/text option."},
+  {q:"How do I turn on sighting alerts?",a:"On your dashboard, tap \"🔔 Enable alerts\" once and allow the browser's notification permission. On iPhone, this only works after you've added TagPing to your Home Screen first (tap Share in Safari, then \"Add to Home Screen\") — that's an Apple restriction, not a TagPing limitation."},
+  {q:"What does a finder see when they scan my pet's tag?",a:"Only what you chose to share: name, photo, color, age, and any note — never your email, phone number, or exact address. Your phone number is a private note for your own reference only and is never shown to a finder; if they need to reach you, they send a message through the tag itself and you're notified."},
   {q:"My pet is missing — what should I do in the app?",a:"Open your dashboard, find the pet's card, and tap \"Mark missing.\" Their public profile updates immediately. You can also open \"Missing poster\" from the same card to print a ready-made flyer with their photo and QR code."},
   {q:"Can I edit or remove a pet later?",a:"Yes — every pet card has Edit and Delete. Deleting a pet also removes its sighting history, so it can't be undone."},
   {q:"Is the location a finder shares exact?",a:"Yes, but only after the finder explicitly grants location permission, and only you (the owner) can see it — never anyone else."},
@@ -19,7 +19,7 @@ const FAQ=[
 export default function Help(){
   return <main className="shell">
     <section className="card center">
-      <div className="paw">🐾</div>
+      <div className="paw">🏷️</div>
       <p className="eyebrow">HOW PAWPING WORKS</p>
       <h1>Help &amp; FAQ</h1>
     </section>

@@ -1,4 +1,4 @@
-const C = "pawping-cache-v0.7.0";
+const C = "tagping-cache-v0.7.1";
  
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(C).then(c => c.addAll(["/", "/owner", "/manifest.json", "/icon.svg"])));
@@ -20,7 +20,7 @@ self.addEventListener("fetch", e => {
  
 // A finder's sighting arrives here as a push message sent from /api/report.
 self.addEventListener("push", e => {
-  let data = {title: "PawPing", body: "You have a new update.", url: "/owner"};
+  let data = {title: "TagPing", body: "You have a new update.", url: "/owner"};
   try { data = {...data, ...e.data.json()}; } catch (err) {}
   e.waitUntil(
     self.registration.showNotification(data.title, {

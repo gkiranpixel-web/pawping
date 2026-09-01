@@ -97,7 +97,7 @@ export default function Admin(){
 
   return <main className="wide">
     <header>
-      <div><p className="eyebrow">ADMIN DASHBOARD</p><h1>PawPing Operations</h1></div>
+      <div><p className="eyebrow">ADMIN DASHBOARD</p><h1>TagPing Operations</h1></div>
       <Link className="secondary linkButton" href="/owner">Owner dashboard</Link>
     </header>
 
@@ -129,7 +129,7 @@ export default function Admin(){
     {tab==="cats"&&<>
       <div className="tableToolbar"><button className="secondary" onClick={()=>exportCsv(filtered.cats,[
         {label:"Pet",value:c=>c.name},{label:"Owner",value:c=>c.owner_email},{label:"Status",value:c=>c.status},{label:"Created",value:c=>c.created_at},
-      ],"pawping-cats.csv")}>Export CSV</button></div>
+      ],"tagping-cats.csv")}>Export CSV</button></div>
       <div className="tableWrap">
         <table>
           <thead><tr><th>Pet</th><th>Owner</th><th>Status</th><th>Created</th><th></th></tr></thead>
@@ -152,7 +152,7 @@ export default function Admin(){
     {tab==="reports"&&<>
       <div className="tableToolbar"><button className="secondary" onClick={()=>exportCsv(filtered.reports,[
         {label:"Pet",value:r=>r.pet_name},{label:"Owner",value:r=>r.owner_email},{label:"Message",value:r=>r.message||""},{label:"Accuracy (m)",value:r=>r.accuracy_m?Math.round(r.accuracy_m):""},{label:"Resolved",value:r=>r.resolved_at?"yes":"no"},{label:"Created",value:r=>r.created_at},
-      ],"pawping-reports.csv")}>Export CSV</button></div>
+      ],"tagping-reports.csv")}>Export CSV</button></div>
       <div className="tableWrap">
         <table>
           <thead><tr><th>Pet</th><th>Owner</th><th>Message</th><th>Accuracy</th><th>Status</th><th>Created</th><th></th></tr></thead>
@@ -173,7 +173,7 @@ export default function Admin(){
     {tab==="users"&&<>
       <div className="tableToolbar"><button className="secondary" onClick={()=>exportCsv(filtered.users,[
         {label:"Email",value:u=>u.email},{label:"Created",value:u=>u.created_at},{label:"Last sign in",value:u=>u.last_sign_in_at||""},
-      ],"pawping-users.csv")}>Export CSV</button></div>
+      ],"tagping-users.csv")}>Export CSV</button></div>
       <div className="tableWrap">
         <table>
           <thead><tr><th>Email</th><th>Created</th><th>Last sign in</th></tr></thead>

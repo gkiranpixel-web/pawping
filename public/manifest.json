@@ -1,7 +1,7 @@
 {
-  "name": "PawPing",
-  "short_name": "PawPing",
-  "description": "QR pet recovery and sightings",
+  "name": "TagPing",
+  "short_name": "TagPing",
+  "description": "QR tags and instant alerts to help lost pets find their way home",
   "id": "/owner",
   "start_url": "/owner",
   "scope": "/",

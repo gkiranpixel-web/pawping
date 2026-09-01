@@ -1,6 +1,6 @@
-# PawPing ready-to-deploy starter
+# TagPing ready-to-deploy starter
 
-Upload the contents of this ZIP to the ROOT of your GitHub repository. Do not upload the enclosing pawping-ready folder.
+Upload the contents of this ZIP to the ROOT of your GitHub repository. Do not upload the enclosing tagping-ready folder.
 
 Required Vercel variables:
 - NEXT_PUBLIC_SUPABASE_URL

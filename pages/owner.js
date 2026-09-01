@@ -166,7 +166,7 @@ export default function Owner(){
     const data=await QRCode.toDataURL(url,{width:1000,margin:2});
     const a=document.createElement("a");
     a.href=data;
-    a.download=`pawping-${p.name}-qr.png`;
+    a.download=`tagping-${p.name}-qr.png`;
     a.click();
   }
  
@@ -202,13 +202,13 @@ export default function Owner(){
   ];
  
   if(!ready)return <main className="shell"><section className="card">Setup missing.</section></main>;
-  if(!session)return <main className="shell"><section className="card center"><div className="paw">🐾</div><h1>Owner login</h1><form onSubmit={login}><label>Email</label><input type="email" value={email} onChange={e=>setEmail(e.target.value)} required/><button>Send magic link</button></form>{msg&&<p className="notice">{msg}</p>}</section></main>;
+  if(!session)return <main className="shell"><section className="card center"><div className="paw">🏷️</div><h1>Owner login</h1><form onSubmit={login}><label>Email</label><input type="email" value={email} onChange={e=>setEmail(e.target.value)} required/><button>Send magic link</button></form>{msg&&<p className="notice">{msg}</p>}</section></main>;
  
   const map=selected?`https://www.openstreetmap.org/export/embed.html?bbox=${selected.longitude-.008}%2C${selected.latitude-.005}%2C${selected.longitude+.008}%2C${selected.latitude+.005}&layer=mapnik&marker=${selected.latitude}%2C${selected.longitude}`:"";
  
   return <main className="wide">
     <header>
-      <div><p className="eyebrow">OWNER DASHBOARD</p><h1>PawPing</h1></div>
+      <div><p className="eyebrow">OWNER DASHBOARD</p><h1>TagPing</h1></div>
       <div className="actions">
         {notif==="default"&&<button className="secondary" onClick={enableNotifications}>🔔 Enable alerts</button>}
         {notif==="subscribed"&&<span className="secondary linkButton">🔔 Alerts on</span>}
@@ -221,8 +221,8 @@ export default function Owner(){
     {msg&&<p className="notice">{msg}</p>}
  
     {notif==="default"&&<p className="notice">🔔 <b>Turn on sighting alerts</b> — finders never see your phone or email, so a push notification is the only instant way you'll know someone found a pet. <button className="secondary" onClick={enableNotifications}>Enable now</button></p>}
-    {notif==="denied"&&<p className="notice">🔕 Notifications are blocked in this browser's settings. Since finders can't see your contact info either, re-enabling them (in your browser's site settings for PawPing) is how you'll hear about a sighting the moment it happens.</p>}
-    {notif==="unsupported"&&<p className="notice">🔕 Push notifications aren't available in this browser session. On iPhone, add PawPing to your Home Screen first — see <Link href="/help">Help</Link> for the steps.</p>}
+    {notif==="denied"&&<p className="notice">🔕 Notifications are blocked in this browser's settings. Since finders can't see your contact info either, re-enabling them (in your browser's site settings for TagPing) is how you'll hear about a sighting the moment it happens.</p>}
+    {notif==="unsupported"&&<p className="notice">🔕 Push notifications aren't available in this browser session. On iPhone, add TagPing to your Home Screen first — see <Link href="/help">Help</Link> for the steps.</p>}
  
     <section className="stats">{stats.map(([n,t])=><div className="stat" key={t}><b>{n}</b><span>{t}</span></div>)}</section>
  

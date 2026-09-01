@@ -27,6 +27,26 @@ The version shown in the footer of every page (bottom of the screen) always matc
 `package.json`, so a mismatch between what you see live and what's in this file means
 the latest deploy hasn't gone out yet.
 
+## 0.7.1
+
+- **PawPing is now TagPing.** The app is expanding beyond pets (see 0.7.0),
+  so the name changed to match — "Ping" stays, since the instant
+  notification-on-scan is the actual core of the product; "Paw" is gone
+  since this isn't pet-only anymore. Renamed everywhere in the app itself
+  (page titles, manifest, footer, service worker cache, install prompts,
+  notification copy) and in package.json. **Not** renamed: the GitHub repo
+  or the live `pawping.vercel.app` domain — that's a separate decision,
+  since changing it would break the URL already encoded in any physical
+  QR tags printed so far.
+- The category system, multi-language public page, reward field, and
+  trust badge added in 0.7.0 are now gated to the app owner's own account
+  only (enforced server-side via RLS, not just hidden in the UI) — a
+  deliberate soft launch, not a permanent restriction. Every other
+  registered user's experience is unchanged from before 0.7.0.
+- Fixed a stale Help page answer that still said a finder sees a
+  contact-phone call/text option — that was removed in 0.6.0; the phone
+  field has been a private, owner-only note ever since.
+
 ## 0.7.0
 
 - **PawPing is no longer pet-only.** Added a `category` field (pet, generic

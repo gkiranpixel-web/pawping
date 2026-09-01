@@ -64,7 +64,7 @@ export default async function handler(req, res) {
     let notified = 0;
     if (cat.owner_id) {
       const title = report_type === "have" ? `Someone has ${cat.name} safe!` : `${cat.name} was just spotted`;
-      const body = trimmedMessage || "Open PawPing to see the sighting.";
+      const body = trimmedMessage || "Open TagPing to see the sighting.";
       ({notified} = await notifyOwner(adminClient, {ownerId: cat.owner_id, title, body}));
     }
 
