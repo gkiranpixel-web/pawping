@@ -27,6 +27,35 @@ The version shown in the footer of every page (bottom of the screen) always matc
 `package.json`, so a mismatch between what you see live and what's in this file means
 the latest deploy hasn't gone out yet.
 
+## 0.7.0
+
+- **PawPing is no longer pet-only.** Added a `category` field (pet, generic
+  lost item, medical ID, property/rental tag) and a `details` field for
+  category-specific info, so one account can now issue a QR tag for keys,
+  a bag, a bike, a medical ID bracelet, or a rental property — not just an
+  animal. Adding a category going forward is mostly configuration
+  (`lib/categories.js`), not new page logic.
+- The public scan page now branches by category: pet/item keep the
+  existing "report a sighting" flow with generalized copy; medical ID and
+  property tags show a curated info panel instead (no report form). A
+  medical ID additionally shows a tap-to-call emergency contact button —
+  the one deliberate exception to PawPing's "never show contact info to a
+  finder" rule, since that's the entire point of a medical ID.
+- Added a "Registered on PawPing since <month year>" trust badge to every
+  public scan page, and an optional reward note owners can set that shows
+  as a highlighted callout to finders.
+- The scan page (`/c/[token]`) is now available in English, Spanish,
+  French, German, and Hindi — auto-detected from the visitor's browser,
+  with a manual switcher. The owner dashboard stays English; this only
+  covers the page a stranger who may not share the owner's language
+  actually lands on.
+- Owner dashboard: category selector and per-category detail fields on
+  the add/edit form, category filter on the item list, category icon/label
+  shown per item.
+- Schema changes are now tracked as versioned files under
+  `supabase/migrations/` going forward (see that folder's README for why
+  everything before this release isn't reconstructable from the repo).
+
 ## 0.6.1
 
 - **Rotated a leaked secret**: an earlier import doc (`IMPORT_V9.md`) had a real VAPID
