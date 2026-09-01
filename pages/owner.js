@@ -21,6 +21,7 @@ export default function Owner(){
   const [form,setForm]=useState(blank);
   const [photo,setPhoto]=useState(null);
   const [detailsForm,setDetailsForm]=useState({});
+  const [isBeta,setIsBeta]=useState(false);
   const [editingId,setEditingId]=useState(null);
   const [msg,setMsg]=useState("");
   const [tab,setTab]=useState("pets");
@@ -37,6 +38,14 @@ export default function Owner(){
     return()=>l.subscription.unsubscribe();
   },[]);
   useEffect(()=>{if(session)load()},[session]);
+  useEffect(()=>{
+    if(!session||!supabase)return;
+    // The category system (item/medical/property/i18n/reward) is gated to
+    // the app owner's own account for now — see the v16 migration. This
+    // is only the UI gate; the real enforcement is the RLS policy on
+    // cats, so nothing here is a security boundary on its own.
+    supabase.rpc("is_beta_user").then(({data})=>setIsBeta(data===true));
+  },[session]);
   useEffect(()=>{checkNotifStatus()},[]);
  
   async function checkNotifStatus(){
@@ -229,7 +238,7 @@ export default function Owner(){
           <div className="checklistItem"><span className="checklistNum">2</span><div className="checklistBody"><b>Then: download the QR tag</b><span>Print it and attach it to a collar tag or clip.</span></div></div>
           <div className="checklistItem"><span className="checklistNum">3</span><div className="checklistBody"><b>Then: turn on sighting alerts</b><span>So you find out the moment someone scans it.</span></div></div>
         </div>}
-        {pets.length>0&&<div className="actions" style={{marginBottom:12}}>
+        {isBeta&&pets.length>0&&<div className="actions" style={{marginBottom:12}}>
           <select className="filter" value={categoryFilter} onChange={e=>setCategoryFilter(e.target.value)}>
             <option value="all">All categories</option>
             {categoryList().map(c=><option key={c.value} value={c.value}>{c.label}</option>)}
@@ -254,12 +263,14 @@ export default function Owner(){
       <aside className="card">
         <h2>{editingId?"Edit pet":"Add pet"}</h2>
         <form onSubmit={save}>
-          <label>Category</label>
-          <select value={form.category} onChange={e=>setForm({...form,category:e.target.value})}>
-            {categoryList().map(c=><option key={c.value} value={c.value}>{c.label}</option>)}
-          </select>
+          {isBeta&&<>
+            <label>Category</label>
+            <select value={form.category} onChange={e=>setForm({...form,category:e.target.value})}>
+              {categoryList().map(c=><option key={c.value} value={c.value}>{c.label}</option>)}
+            </select>
+          </>}
           {["name","age","color","temperament","health_note"].map(k=><div key={k}><label>{k.replace("_"," ")}</label><input required={k==="name"} value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})}/></div>)}
-          {detailFieldsFor(form.category).map(f=><div key={f.key}><label>{f.label}</label><input placeholder={f.placeholder||""} value={detailsForm[f.key]||""} onChange={e=>setDetailsForm({...detailsForm,[f.key]:e.target.value})}/></div>)}
+          {isBeta&&detailFieldsFor(form.category).map(f=><div key={f.key}><label>{f.label}</label><input placeholder={f.placeholder||""} value={detailsForm[f.key]||""} onChange={e=>setDetailsForm({...detailsForm,[f.key]:e.target.value})}/></div>)}
           <label>Your phone (private, optional)</label>
           <input type="tel" placeholder="Kept for your own reference only — never shown to finders" value={form.contact_phone} onChange={e=>setForm({...form,contact_phone:e.target.value})}/>
           <label>Photo{editingId?" (leave empty to keep current)":""}</label>

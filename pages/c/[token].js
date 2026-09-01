@@ -14,9 +14,9 @@ function registeredSince(iso,locale){
 // English — with a manual switcher, since auto-detection is a guess, not
 // a guarantee. Owner-side UI (the dashboard, tag/poster printouts) stays
 // English; this is the one page a stranger actually lands on.
-function useLocale(){
+function useLocale(enabled){
   const [locale,setLocale]=useState("en");
-  useEffect(()=>{setLocale(detectLocale())},[]);
+  useEffect(()=>{if(enabled)setLocale(detectLocale())},[enabled]);
   const t=useMemo(()=>makeT(locale),[locale]);
   return {locale,setLocale,t};
 }
@@ -29,7 +29,6 @@ function LanguageSwitcher({locale,setLocale}){
 
 export default function Item(){
   const {query}=useRouter();
-  const {locale,setLocale,t}=useLocale();
   const [item,setItem]=useState(null);
   const [loading,setLoading]=useState(true);
   const [notFound,setNotFound]=useState(false);
@@ -40,6 +39,8 @@ export default function Item(){
   const [hp,setHp]=useState("");
   const [result,setResult]=useState("");
   const startedAt=useRef(Date.now());
+
+  const {locale,setLocale,t}=useLocale(item?.is_owner_beta===true);
 
   useEffect(()=>{
     if(!query.token||!supabase)return;
@@ -93,7 +94,7 @@ export default function Item(){
   const copy=category.copy[item.status]||category.copy.safe;
 
   return <main className="shell">
-    <div className="langRow"><LanguageSwitcher locale={locale} setLocale={setLocale}/></div>
+    {item.is_owner_beta&&<div className="langRow"><LanguageSwitcher locale={locale} setLocale={setLocale}/></div>}
     <section className={`hero ${item.status}`}>
       {item.photo_url?<img src={item.photo_url} alt={item.name}/>:<span>{category.icon}</span>}
       <b className={`pill ${item.status}`}>{t(copy.pillKey)}</b>
@@ -106,7 +107,7 @@ export default function Item(){
         {category.facts.map(f=><div key={f.key}><small>{t(f.labelKey)}</small><strong>{readField(item,f)||"—"}</strong></div>)}
       </div>
       {item.health_note&&<p className="notice"><b>{t("ui.important")}</b> {item.health_note}</p>}
-      {item.details?.reward_note&&<p className="reward">🎁 {item.details.reward_note}</p>}
+      {item.is_owner_beta&&item.details?.reward_note&&<p className="reward">🎁 {item.details.reward_note}</p>}
       <p className="tone">{t(copy.toneKey)}</p>
 
       {!showForm&&<button className="secondary block" onClick={()=>setShowForm(true)}>{t("ui.somethingWrong")}</button>}
@@ -128,7 +129,7 @@ export default function Item(){
         {result&&<p className="notice">{result}</p>}
         <p className="privacy">{t("ui.privacyNote")}</p>
       </>}
-      {registeredSince(item.created_at,locale)&&<p className="trustBadge">{t("ui.registeredSince",{date:registeredSince(item.created_at,locale)})}</p>}
+      {item.is_owner_beta&&registeredSince(item.created_at,locale)&&<p className="trustBadge">{t("ui.registeredSince",{date:registeredSince(item.created_at,locale)})}</p>}
     </section>
   </main>;
 }
@@ -162,7 +163,7 @@ function InfoPage({item,category,t,locale,setLocale}){
       </div>}
 
       {!fields.length&&!item.health_note&&<p className="muted">{t("ui.noDetails")}</p>}
-      {registeredSince(item.created_at,locale)&&<p className="trustBadge">{t("ui.registeredSince",{date:registeredSince(item.created_at,locale)})}</p>}
+      {item.is_owner_beta&&registeredSince(item.created_at,locale)&&<p className="trustBadge">{t("ui.registeredSince",{date:registeredSince(item.created_at,locale)})}</p>}
     </section>
   </main>;
 }
