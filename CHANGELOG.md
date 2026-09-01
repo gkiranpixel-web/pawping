@@ -27,6 +27,19 @@ The version shown in the footer of every page (bottom of the screen) always matc
 `package.json`, so a mismatch between what you see live and what's in this file means
 the latest deploy hasn't gone out yet.
 
+## 0.7.5
+
+- Added Sentry error monitoring (their free "Developer" plan — 5,000
+  errors/month, no cost, no card on file). Unhandled errors in the browser,
+  the server, and API routes (like /api/report) now get reported instead
+  of failing silently. Kept deliberately minimal: no source-map upload, no
+  performance tracing, just error capture — set NEXT_PUBLIC_SENTRY_DSN (and
+  optionally SENTRY_DSN) in Vercel to turn it on; the app works exactly the
+  same without them, just without error reports.
+- Note: adding the required _error.js page (so Sentry also catches SSR
+  crashes) means the 404 page is now server-rendered instead of static —
+  a negligible cost for a page almost nobody hits directly.
+
 ## 0.7.4
 
 - **Fixed a real bug found while writing the tests below:** the Medical ID
