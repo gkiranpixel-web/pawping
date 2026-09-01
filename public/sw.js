@@ -1,4 +1,4 @@
-const C = "tagping-cache-v0.8.2";
+const C = "tagping-cache-v0.8.3";
  
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(C).then(c => c.addAll(["/", "/owner", "/manifest.json", "/icon.svg"])));

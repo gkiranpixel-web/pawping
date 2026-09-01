@@ -27,6 +27,30 @@ The version shown in the footer of every page (bottom of the screen) always matc
 `package.json`, so a mismatch between what you see live and what's in this file means
 the latest deploy hasn't gone out yet.
 
+## 0.8.3
+
+- Fixed the admin screen's other blind spot, reported by GK right after
+  0.8.2: it listed every pet/item/property tag/medical ID the same way,
+  with no category shown and a "Mark missing/safe" toggle that only
+  ever means something for pet/item.
+  - The "Pets" tab now shows each row's category (icon + name), and has
+    a category filter dropdown next to the search box.
+  - The Missing/Safe toggle only renders for pet/item rows; a
+    property tag or medical ID shows "N/A for property tag" / "N/A for
+    medical ID" instead of a button that silently did nothing.
+  - `PATCH /api/admin/cats/[id]` now rejects setting status to
+    "missing" on a non-findable category server-side (matching the
+    owner-form guard already in place) — the client-side check is
+    just a courtesy to skip the round trip.
+  - `overview.ts` now only counts a cat as missing if its category
+    supports the report flow, so a stray "missing" status on a
+    property/medical row (possible before this guard existed) can no
+    longer inflate the "Missing" ops tab or the top stats bar.
+  - CSV export from the "Pets" tab now includes the category column.
+  - Renamed a few generic "Pet" table headers/CSV labels to "Name" /
+    "Item" for accuracy now that non-pet categories are common.
+- No schema change. No data migration.
+
 ## 0.8.2
 
 - Fixed a real bug reported by GK: the "add/edit" form on the owner

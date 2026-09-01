@@ -1,9 +1,11 @@
 import {NextApiRequest, NextApiResponse} from "next";
 import {clients, requireAdmin} from "../../../lib/admin";
+import {getCategory} from "../../../lib/categories";
 
 interface CatRow {
   id: string;
   name: string;
+  category: string;
   status: string;
   status_changed_at: string;
   owner_id: string | null;
@@ -30,7 +32,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const [usersResult, catsResult, reportsResult, unresolvedResult] = await Promise.all([
       adminClient.auth.admin.listUsers({page: 1, perPage: 1000}),
-      adminClient.from("cats").select("id,name,status,status_changed_at,owner_id,created_at").order("created_at", {ascending: false}),
+      adminClient.from("cats").select("id,name,category,status,status_changed_at,owner_id,created_at").order("created_at", {ascending: false}),
       adminClient.from("finder_reports").select("id,cat_id,message,accuracy_m,resolved_at,created_at,cats(name,owner_id)").order("created_at", {ascending: false}).limit(200),
       adminClient.from("finder_reports").select("id", {count: "exact", head: true}).is("resolved_at", null),
     ]);
@@ -47,7 +49,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Missing pets need their latest known location. Fetch it directly for
     // just those cats rather than relying on the capped recent-reports list
     // above, so a pet missing for weeks still shows its last sighting.
-    const missingCats = cats.filter(c => c.status === "missing");
+    //
+    // "Missing" only ever means anything for a findable category (pet,
+    // item) — property/rental tags and medical IDs never had a way to
+    // set it in the first place (the owner form hides that control for
+    // them, see lib/categories.ts's CATEGORIES[key].hasReportFlow), but a
+    // stray "missing" status on one — from before that fix, or a future
+    // admin edit — shouldn't surface here as if it meant something.
+    const missingCats = cats.filter(c => c.status === "missing" && getCategory(c.category).hasReportFlow);
     const lastReportByCat: Record<string, FinderReportRow> = {};
     if (missingCats.length) {
       const {data: missingReports, error: missingError} = await adminClient

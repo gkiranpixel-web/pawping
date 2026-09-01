@@ -1,6 +1,7 @@
 import {useEffect,useMemo,useState} from "react";
 import Link from "next/link";
 import {supabase,ready} from "../lib/supabase";
+import {categoryList,getCategory} from "../lib/categories";
 
 const TABS=["missing","cats","reports","users"];
 
@@ -10,6 +11,7 @@ export default function Admin(){
   const [error,setError]=useState("");
   const [tab,setTab]=useState("missing");
   const [query,setQuery]=useState("");
+  const [categoryFilter,setCategoryFilter]=useState("all");
   const [busy,setBusy]=useState("");
   const [notice,setNotice]=useState("");
 
@@ -50,6 +52,9 @@ export default function Admin(){
   }
 
   function toggleCatStatus(cat){
+    // Guarded server-side too (see /api/admin/cats/[id].ts) — this client
+    // check just avoids a round trip for a request that can't succeed.
+    if(cat.status==="safe"&&!getCategory(cat.category).hasReportFlow)return;
     return call("PATCH",`/api/admin/cats/${cat.id}`,{status:cat.status==="safe"?"missing":"safe"});
   }
   function deleteCat(cat){
@@ -80,15 +85,17 @@ export default function Admin(){
   const filtered=useMemo(()=>{
     if(!data)return {users:[],cats:[],reports:[],missing:[]};
     const q=query.trim().toLowerCase();
-    if(!q)return data;
     const has=(...vals)=>vals.some(v=>String(v||"").toLowerCase().includes(q));
+    const matchesQuery=q?has:()=>true;
     return {
-      users:data.users.filter(u=>has(u.email)),
-      cats:data.cats.filter(c=>has(c.name,c.owner_email,c.status)),
-      reports:data.reports.filter(r=>has(r.pet_name,r.owner_email,r.message)),
-      missing:data.missing.filter(m=>has(m.name,m.owner_email)),
+      users:data.users.filter(u=>matchesQuery(u.email)),
+      cats:data.cats
+        .filter(c=>categoryFilter==="all"||c.category===categoryFilter)
+        .filter(c=>matchesQuery(c.name,c.owner_email,c.status)),
+      reports:data.reports.filter(r=>matchesQuery(r.pet_name,r.owner_email,r.message)),
+      missing:data.missing.filter(m=>matchesQuery(m.name,m.owner_email)),
     };
-  },[data,query]);
+  },[data,query,categoryFilter]);
 
   if(!ready)return <main className="shell"><section className="card">Setup missing.</section></main>;
   if(!session)return <main className="shell"><section className="card"><h1>Admin</h1><p>Sign in through the owner dashboard first.</p><Link href="/owner">Owner login</Link></section></main>;
@@ -109,12 +116,18 @@ export default function Admin(){
 
     <div className="toolbar">
       <nav>{TABS.map(t=><button className={tab===t?"":"secondary"} key={t} onClick={()=>setTab(t)}>{t}{t==="missing"&&data.missing.length?` (${data.missing.length})`:""}</button>)}</nav>
-      <input className="search" placeholder="Search this tab..." value={query} onChange={e=>setQuery(e.target.value)}/>
+      <div className="toolbarControls">
+        {tab==="cats"&&<select className="filter" value={categoryFilter} onChange={e=>setCategoryFilter(e.target.value)}>
+          <option value="all">All categories</option>
+          {categoryList().map(c=><option key={c.value} value={c.value}>{c.label}</option>)}
+        </select>}
+        <input className="search" placeholder="Search this tab..." value={query} onChange={e=>setQuery(e.target.value)}/>
+      </div>
     </div>
 
     {tab==="missing"&&<div className="tableWrap">
       <table>
-        <thead><tr><th>Pet</th><th>Owner</th><th>Missing since</th><th>Last known location</th><th></th></tr></thead>
+        <thead><tr><th>Name</th><th>Owner</th><th>Missing since</th><th>Last known location</th><th></th></tr></thead>
         <tbody>{filtered.missing.map(m=><tr key={m.id}>
           <td>{m.name}</td>
           <td>{m.owner_email}</td>
@@ -123,39 +136,50 @@ export default function Admin(){
           <td><button className="secondary" disabled={busy} onClick={()=>call("PATCH",`/api/admin/cats/${m.id}`,{status:"safe"})}>Mark safe</button></td>
         </tr>)}</tbody>
       </table>
-      {!filtered.missing.length&&<div className="empty">No missing pets right now.</div>}
+      {/* This tab only ever lists findable categories (pet, item) — see
+          /api/admin/overview.ts, which filters "missing" to
+          hasReportFlow categories. Property/medical tags never appear
+          here, since "missing" isn't a concept that applies to them. */}
+      {!filtered.missing.length&&<div className="empty">No missing pets or items right now.</div>}
     </div>}
 
     {tab==="cats"&&<>
       <div className="tableToolbar"><button className="secondary" onClick={()=>exportCsv(filtered.cats,[
-        {label:"Pet",value:c=>c.name},{label:"Owner",value:c=>c.owner_email},{label:"Status",value:c=>c.status},{label:"Created",value:c=>c.created_at},
+        {label:"Name",value:c=>c.name},{label:"Category",value:c=>getCategory(c.category).label},{label:"Owner",value:c=>c.owner_email},{label:"Status",value:c=>c.status},{label:"Created",value:c=>c.created_at},
       ],"tagping-cats.csv")}>Export CSV</button></div>
       <div className="tableWrap">
         <table>
-          <thead><tr><th>Pet</th><th>Owner</th><th>Status</th><th>Created</th><th></th></tr></thead>
-          <tbody>{filtered.cats.map(c=><tr key={c.id}>
-            <td>{c.name}</td>
-            <td>{c.owner_email}</td>
-            <td><span className={`status ${c.status}`}>{c.status}</span></td>
-            <td>{new Date(c.created_at).toLocaleString()}</td>
-            <td className="rowActions">
-              <button className="secondary" disabled={busy} onClick={()=>toggleCatStatus(c)}>Mark {c.status==="safe"?"missing":"safe"}</button>
-              <button className="secondary" disabled={busy} onClick={()=>reassignCat(c)}>Reassign</button>
-              <button className="danger" disabled={busy} onClick={()=>deleteCat(c)}>Delete</button>
-            </td>
-          </tr>)}</tbody>
+          <thead><tr><th>Name</th><th>Category</th><th>Owner</th><th>Status</th><th>Created</th><th></th></tr></thead>
+          <tbody>{filtered.cats.map(c=>{
+            const cat=getCategory(c.category);
+            return <tr key={c.id}>
+              <td>{c.name}</td>
+              <td>{cat.icon} {cat.itemNoun.charAt(0).toUpperCase()+cat.itemNoun.slice(1)}</td>
+              <td>{c.owner_email}</td>
+              <td><span className={`status ${c.status}`}>{c.status}</span></td>
+              <td>{new Date(c.created_at).toLocaleString()}</td>
+              <td className="rowActions">
+                {cat.hasReportFlow
+                  ? <button className="secondary" disabled={busy} onClick={()=>toggleCatStatus(c)}>Mark {c.status==="safe"?"missing":"safe"}</button>
+                  : <span className="muted" style={{fontSize:12}}>N/A for {cat.itemNoun}</span>
+                }
+                <button className="secondary" disabled={busy} onClick={()=>reassignCat(c)}>Reassign</button>
+                <button className="danger" disabled={busy} onClick={()=>deleteCat(c)}>Delete</button>
+              </td>
+            </tr>;
+          })}</tbody>
         </table>
-        {!filtered.cats.length&&<div className="empty">No pets found.</div>}
+        {!filtered.cats.length&&<div className="empty">No pets or items found.</div>}
       </div>
     </>}
 
     {tab==="reports"&&<>
       <div className="tableToolbar"><button className="secondary" onClick={()=>exportCsv(filtered.reports,[
-        {label:"Pet",value:r=>r.pet_name},{label:"Owner",value:r=>r.owner_email},{label:"Message",value:r=>r.message||""},{label:"Accuracy (m)",value:r=>r.accuracy_m?Math.round(r.accuracy_m):""},{label:"Resolved",value:r=>r.resolved_at?"yes":"no"},{label:"Created",value:r=>r.created_at},
+        {label:"Item",value:r=>r.pet_name},{label:"Owner",value:r=>r.owner_email},{label:"Message",value:r=>r.message||""},{label:"Accuracy (m)",value:r=>r.accuracy_m?Math.round(r.accuracy_m):""},{label:"Resolved",value:r=>r.resolved_at?"yes":"no"},{label:"Created",value:r=>r.created_at},
       ],"tagping-reports.csv")}>Export CSV</button></div>
       <div className="tableWrap">
         <table>
-          <thead><tr><th>Pet</th><th>Owner</th><th>Message</th><th>Accuracy</th><th>Status</th><th>Created</th><th></th></tr></thead>
+          <thead><tr><th>Item</th><th>Owner</th><th>Message</th><th>Accuracy</th><th>Status</th><th>Created</th><th></th></tr></thead>
           <tbody>{filtered.reports.map(r=><tr key={r.id}>
             <td>{r.pet_name}</td>
             <td>{r.owner_email}</td>
