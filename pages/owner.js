@@ -189,6 +189,12 @@ export default function Owner(){
   }
  
   const shownPets=useMemo(()=>categoryFilter==="all"?pets:pets.filter(p=>p.category===categoryFilter),[pets,categoryFilter]);
+  // The dashboard title tracks the category filter above the pet list, so
+  // picking "Pet" there shows PawPing, "Property" shows StayPing, etc. Stays
+  // "TagPing" for "All categories" and for anyone without beta access (the
+  // filter dropdown itself is beta-gated, so categoryFilter never leaves
+  // "all" for a non-beta owner).
+  const dashboardBrand=categoryFilter==="all"?"TagPing":getCategory(categoryFilter).brand;
   const byFilter=useMemo(()=>filter==="all"?reports:reports.filter(r=>r.cat_id===filter),[reports,filter]);
   const shown=useMemo(()=>showUnresolvedOnly?byFilter.filter(r=>!r.resolved_at):byFilter,[byFilter,showUnresolvedOnly]);
   const unresolvedCount=useMemo(()=>reports.filter(r=>!r.resolved_at).length,[reports]);
@@ -208,7 +214,7 @@ export default function Owner(){
  
   return <main className="wide">
     <header>
-      <div><p className="eyebrow">OWNER DASHBOARD</p><h1>TagPing</h1></div>
+      <div><p className="eyebrow">OWNER DASHBOARD</p><h1>{dashboardBrand}</h1></div>
       <div className="actions">
         {notif==="default"&&<button className="secondary" onClick={enableNotifications}>🔔 Enable alerts</button>}
         {notif==="subscribed"&&<span className="secondary linkButton">🔔 Alerts on</span>}

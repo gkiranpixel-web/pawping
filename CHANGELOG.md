@@ -27,6 +27,14 @@ The version shown in the footer of every page (bottom of the screen) always matc
 `package.json`, so a mismatch between what you see live and what's in this file means
 the latest deploy hasn't gone out yet.
 
+## 0.7.3
+
+- The owner dashboard title now tracks the category filter above your pet
+  list, as a beta-only touch: filter to "Pet" and it reads PawPing, "Property"
+  reads StayPing, "Medical ID" reads VitalPing, "Item" or "All categories"
+  stays TagPing. Non-beta owners never see this move (the filter itself is
+  beta-gated), so the title always reads TagPing for them, same as before.
+
 ## 0.7.2
 
 - Each category now has its own public-facing brand shown on the scan page, instead
