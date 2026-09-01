@@ -2,8 +2,9 @@ import {useEffect,useMemo,useState} from "react";
 import Link from "next/link";
 import QRCode from "qrcode";
 import {supabase,ready} from "../lib/supabase";
+import {getCategory,categoryList,detailFieldsFor} from "../lib/categories";
  
-const blank={name:"",age:"",color:"",temperament:"",health_note:"",contact_phone:"",status:"safe"};
+const blank={name:"",age:"",color:"",temperament:"",health_note:"",contact_phone:"",status:"safe",category:"pet"};
  
 function urlBase64ToUint8Array(base64String){
   const padding="=".repeat((4-base64String.length%4)%4);
@@ -19,6 +20,7 @@ export default function Owner(){
   const [reports,setReports]=useState([]);
   const [form,setForm]=useState(blank);
   const [photo,setPhoto]=useState(null);
+  const [detailsForm,setDetailsForm]=useState({});
   const [editingId,setEditingId]=useState(null);
   const [msg,setMsg]=useState("");
   const [tab,setTab]=useState("pets");
@@ -105,18 +107,22 @@ export default function Owner(){
  
   function startEdit(p){
     setEditingId(p.id);
-    setForm({name:p.name||"",age:p.age||"",color:p.color||"",temperament:p.temperament||"",health_note:p.health_note||"",contact_phone:p.contact_phone||"",status:p.status});
+    setForm({name:p.name||"",age:p.age||"",color:p.color||"",temperament:p.temperament||"",health_note:p.health_note||"",contact_phone:p.contact_phone||"",status:p.status,category:p.category||"pet"});
+    setDetailsForm({...(p.details||{})});
     setPhoto(null);
     setMsg("");
   }
   function cancelEdit(){
     setEditingId(null);
     setForm(blank);
+    setDetailsForm({});
     setPhoto(null);
   }
  
   async function save(e){
     e.preventDefault();
+    const details={};
+    detailFieldsFor(form.category).forEach(f=>{if(detailsForm[f.key])details[f.key]=detailsForm[f.key];});
     let photo_url;
     if(photo){
       const path=session.user.id+"/"+crypto.randomUUID()+"."+photo.name.split(".").pop();
@@ -126,7 +132,7 @@ export default function Owner(){
     }
  
     if(editingId){
-      const patch={...form};
+      const patch={...form,details};
       if(photo_url)patch.photo_url=photo_url;
       const {error}=await supabase.from("cats").update(patch).eq("id",editingId);
       setMsg(error?error.message:"Pet updated.");
@@ -136,12 +142,13 @@ export default function Owner(){
  
     const {error}=await supabase.from("cats").insert({
       ...form,
+      details,
       photo_url:photo_url||null,
       owner_id:session.user.id,
       public_token:crypto.randomUUID().replaceAll("-","").slice(0,20),
     });
-    setMsg(error?error.message:"Pet created.");
-    if(!error){setForm(blank);setPhoto(null);load()}
+    setMsg(error?error.message:"Item created.");
+    if(!error){setForm(blank);setDetailsForm({});setPhoto(null);load()}
   }
  
   async function qr(p){
@@ -223,8 +230,8 @@ export default function Owner(){
         <div className="grid">{pets.map(p=>{
           const url=location.origin+"/c/"+p.public_token;
           return <article className="card" key={p.id}>
-            <div className="petTitle">{p.photo_url?<img src={p.photo_url} alt=""/>:<span>🐈</span>}<div><h3>{p.name}</h3><small className={`status ${p.status}`}>{p.status}</small></div></div>
-            <p>{p.color||"No color"} · {p.age||"No age"}</p>
+            <div className="petTitle">{p.photo_url?<img src={p.photo_url} alt=""/>:<span>{getCategory(p.category).icon}</span>}<div><h3>{p.name}</h3><small className={`status ${p.status}`}>{p.status}</small></div></div>
+            <p>{getCategory(p.category).label} · {p.color||"No color"} · {p.age||"No age"}</p>
             <div className="actions"><button onClick={()=>qr(p)}>Download QR</button><button className="secondary" onClick={()=>navigator.clipboard.writeText(url)}>Copy link</button></div>
             <div className="actions"><a className="secondary linkButton" target="_blank" href={`/c/${p.public_token}`}>Open profile</a><a className="secondary linkButton" target="_blank" href={`/poster/${p.public_token}`}>Missing poster</a></div>
             <div className="actions"><a className="secondary linkButton block" target="_blank" href={`/tag/${p.public_token}`}>🏷️ Collar-sized tag (fits a cat)</a></div>
@@ -238,7 +245,12 @@ export default function Owner(){
       <aside className="card">
         <h2>{editingId?"Edit pet":"Add pet"}</h2>
         <form onSubmit={save}>
+          <label>Category</label>
+          <select value={form.category} onChange={e=>setForm({...form,category:e.target.value})}>
+            {categoryList().map(c=><option key={c.value} value={c.value}>{c.label}</option>)}
+          </select>
           {["name","age","color","temperament","health_note"].map(k=><div key={k}><label>{k.replace("_"," ")}</label><input required={k==="name"} value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})}/></div>)}
+          {detailFieldsFor(form.category).map(f=><div key={f.key}><label>{f.label}</label><input placeholder={f.placeholder||""} value={detailsForm[f.key]||""} onChange={e=>setDetailsForm({...detailsForm,[f.key]:e.target.value})}/></div>)}
           <label>Your phone (private, optional)</label>
           <input type="tel" placeholder="Kept for your own reference only — never shown to finders" value={form.contact_phone} onChange={e=>setForm({...form,contact_phone:e.target.value})}/>
           <label>Photo{editingId?" (leave empty to keep current)":""}</label>

@@ -2,6 +2,7 @@ import {useRouter} from "next/router";
 import {useEffect,useState} from "react";
 import QRCode from "qrcode";
 import {supabase,ready} from "../../lib/supabase";
+import {getCategory} from "../../lib/categories";
 
 // A print-ready "MISSING" flyer for a single pet — the kind of thing an
 // owner posts on a lamppost or shares in a neighborhood group, but with a
@@ -20,10 +21,10 @@ export default function Poster(){
   useEffect(()=>{
     if(!query.token||!supabase)return;
     (async()=>{
-      // Safe, token-gated read — see get_public_pet in the v11 migration.
+      // Safe, token-gated read — see get_public_item in the v13 migration.
       // It never returns contact_phone or owner_id, so a poster link can't
       // leak either even if it's shared or found by someone other than you.
-      const {data}=await supabase.rpc("get_public_pet",{p_token:query.token});
+      const {data}=await supabase.rpc("get_public_item",{p_token:query.token});
       const row=data?.[0]||null;
       setPet(row);
       setLoading(false);
@@ -36,7 +37,7 @@ export default function Poster(){
 
   if(!ready)return <main className="shell"><section className="card">Setup missing.</section></main>;
   if(loading)return <main className="shell"><section className="card">Loading...</section></main>;
-  if(!pet)return <main className="shell"><section className="card"><h1>Pet not found</h1></section></main>;
+  if(!pet)return <main className="shell"><section className="card"><h1>Not found</h1></section></main>;
 
   return <main className="shell">
     <div className="posterActions noPrint">
@@ -46,7 +47,7 @@ export default function Poster(){
       <h1>MISSING</h1>
       <p className="subhead">Have you seen {pet.name}?</p>
       <div className="posterBody">
-        {pet.photo_url?<img className="photo" src={pet.photo_url} alt={pet.name}/>:<div className="photo" style={{display:"grid",placeItems:"center",fontSize:80}}>🐈</div>}
+        {pet.photo_url?<img className="photo" src={pet.photo_url} alt={pet.name}/>:<div className="photo" style={{display:"grid",placeItems:"center",fontSize:80}}>{getCategory(pet.category).icon}</div>}
         <div className="posterFacts">
           <div><small>Name</small>{pet.name}</div>
           <div><small>Color</small>{pet.color||"Not provided"}</div>

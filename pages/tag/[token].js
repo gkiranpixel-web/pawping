@@ -32,8 +32,8 @@ export default function Tag(){
   useEffect(()=>{
     if(!query.token||!supabase)return;
     (async()=>{
-      // Safe, token-gated read — see get_public_pet in the v11 migration.
-      const {data}=await supabase.rpc("get_public_pet",{p_token:query.token});
+      // Safe, token-gated read — see get_public_item in the v13 migration.
+      const {data}=await supabase.rpc("get_public_item",{p_token:query.token});
       setPet(data?.[0]||null);
       setLoading(false);
     })();
@@ -50,7 +50,7 @@ export default function Tag(){
 
   if(!ready)return <main className="shell"><section className="card">Setup missing.</section></main>;
   if(loading)return <main className="shell"><section className="card">Loading...</section></main>;
-  if(!pet)return <main className="shell"><section className="card"><h1>Pet not found</h1></section></main>;
+  if(!pet)return <main className="shell"><section className="card"><h1>Not found</h1></section></main>;
 
   const active=SIZES.find(s=>s.mm===size);
 

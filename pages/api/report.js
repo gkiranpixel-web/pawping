@@ -44,7 +44,7 @@ export default async function handler(req, res) {
       .eq("public_token", token)
       .maybeSingle();
     if (catError) throw catError;
-    if (!cat) return res.status(404).json({error: "Pet not found"});
+    if (!cat) return res.status(404).json({error: "Item not found"});
 
     const {error: insertError} = await adminClient.from("finder_reports").insert({
       cat_id: cat.id,
