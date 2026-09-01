@@ -6,7 +6,12 @@
 // Auto-detects the visitor's browser language, with a manual switcher as
 // an escape hatch (auto-detection is a good guess, not a guarantee).
 
-export const LOCALES = [
+export interface Locale {
+  code: string;
+  label: string;
+}
+
+export const LOCALES: Locale[] = [
   {code:"en", label:"English"},
   {code:"es", label:"Español"},
   {code:"fr", label:"Français"},
@@ -14,7 +19,7 @@ export const LOCALES = [
   {code:"hi", label:"हिन्दी"},
 ];
 
-export function detectLocale(){
+export function detectLocale(): string {
   if(typeof navigator==="undefined")return "en";
   const codes=LOCALES.map(l=>l.code);
   const langs=navigator.languages&&navigator.languages.length?navigator.languages:[navigator.language||"en"];
@@ -25,16 +30,18 @@ export function detectLocale(){
   return "en";
 }
 
-export function makeT(locale){
-  const dict=STRINGS[locale]||STRINGS.en;
-  return (key,vars)=>{
-    let s=dict[key]??STRINGS.en[key]??key;
-    if(vars)Object.keys(vars).forEach(k=>{s=s.replaceAll(`{${k}}`,vars[k]);});
+export type TranslateFn = (key: string, vars?: Record<string, string | number>) => string;
+
+export function makeT(locale: string): TranslateFn {
+  const dict: Record<string, string> = STRINGS[locale] || STRINGS.en;
+  return (key, vars) => {
+    let s = dict[key] ?? STRINGS.en[key] ?? key;
+    if (vars) Object.keys(vars).forEach(k => { s = s.replaceAll(`{${k}}`, String(vars[k])); });
     return s;
   };
 }
 
-export const STRINGS={
+export const STRINGS: Record<string, Record<string, string>> = {
   en:{
     "ui.loading":"Loading...",
     "ui.setupMissing":"Setup missing.",

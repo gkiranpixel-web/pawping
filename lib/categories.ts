@@ -12,7 +12,51 @@
 //    rental tags are this shape. `medicalEmergency: true` additionally
 //    surfaces an emergency-contact call button ahead of the info list.
 
-export const CATEGORIES = {
+export type CategoryKey = "pet" | "item" | "property" | "medical";
+export type FieldSource = "field" | "details";
+
+export interface FieldSpec {
+  key: string;
+  labelKey: string;
+  source?: FieldSource;
+}
+
+export interface StatusCopy {
+  eyebrowKey: string;
+  pillKey: string;
+  headlineKey: string;
+  toneKey: string;
+}
+
+export interface Category {
+  label: string;
+  icon: string;
+  hasReportFlow: boolean;
+  medicalEmergency?: boolean;
+  facts?: FieldSpec[];
+  copy?: { safe: StatusCopy; missing: StatusCopy };
+  infoEyebrowKey?: string;
+  infoFields?: FieldSpec[];
+}
+
+// A row as returned by get_public_item — loosely typed (jsonb `details`
+// can hold any category's fields) rather than a strict per-category union,
+// since the public page branches on `category` at runtime, not on types.
+export interface PublicItemRow {
+  name: string;
+  photo_url: string | null;
+  age: string | null;
+  color: string | null;
+  temperament: string | null;
+  health_note: string | null;
+  status: "safe" | "missing";
+  category: CategoryKey;
+  details: Record<string, string> | null;
+  created_at: string;
+  is_owner_beta: boolean;
+}
+
+export const CATEGORIES: Record<CategoryKey, Category> = {
   pet: {
     label: "Pet",
     icon: "🐈",
@@ -67,26 +111,32 @@ export const CATEGORIES = {
   },
 };
 
-export function getCategory(key){
-  return CATEGORIES[key] || CATEGORIES.pet;
+export function getCategory(key?: string | null): Category {
+  return (key && CATEGORIES[key as CategoryKey]) || CATEGORIES.pet;
 }
 
-export function categoryList(){
-  return Object.entries(CATEGORIES).map(([value,c])=>({value,label:c.label}));
+export function categoryList(): {value: CategoryKey; label: string}[] {
+  return (Object.entries(CATEGORIES) as [CategoryKey, Category][]).map(([value, c]) => ({value, label: c.label}));
 }
 
 // Reads a "fact" or "info field" off a row, honoring source: "field" (a
 // real cats column) vs "details" (a key inside the details jsonb blob).
-export function readField(row,spec){
-  if(spec.source==="details")return row?.details?.[spec.key];
-  return row?.[spec.key];
+export function readField(row: Partial<PublicItemRow> | null | undefined, spec: FieldSpec): string | undefined {
+  if (spec.source === "details") return row?.details?.[spec.key];
+  return (row as Record<string, unknown> | null | undefined)?.[spec.key] as string | undefined;
+}
+
+export interface DetailFieldSpec {
+  key: string;
+  label: string;
+  placeholder?: string;
 }
 
 // Owner-facing editable fields per category, shown in the add/edit form on
 // the dashboard. Deliberately separate from `facts`/`infoFields` (what a
 // finder sees) — e.g. medical's emergency-contact fields are editable here
 // but rendered as a call button on the public page, not in a plain list.
-export const DETAIL_FIELDS = {
+export const DETAIL_FIELDS: Record<CategoryKey, DetailFieldSpec[]> = {
   pet: [
     {key:"reward_note", label:"Reward (optional)", placeholder:"e.g. $50 reward, no questions asked"},
   ],
@@ -110,6 +160,6 @@ export const DETAIL_FIELDS = {
   ],
 };
 
-export function detailFieldsFor(categoryKey){
-  return DETAIL_FIELDS[categoryKey]||[];
+export function detailFieldsFor(categoryKey?: string | null): DetailFieldSpec[] {
+  return (categoryKey && DETAIL_FIELDS[categoryKey as CategoryKey]) || [];
 }

@@ -1,3 +1,4 @@
+import {NextApiRequest, NextApiResponse} from "next";
 import {clients} from "../../lib/admin";
 import {notifyOwner} from "../../lib/notify";
 
@@ -11,7 +12,7 @@ import {notifyOwner} from "../../lib/notify";
 const MAX_MESSAGE_LENGTH = 500;
 const MIN_SECONDS_ON_PAGE = 2; // a real person takes at least this long; a script submits instantly
 
-export default async function handler(req, res) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") return res.status(405).json({error: "Method not allowed"});
   const {token, message, report_type, latitude, longitude, accuracy_m, hp, started_at} = req.body || {};
 

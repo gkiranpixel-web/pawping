@@ -5,7 +5,7 @@ let configured = false;
 // Lazily configure the web-push library with this project's VAPID keys.
 // Throws a clear error if they haven't been set yet, instead of a cryptic
 // failure deep inside the push send.
-export function push() {
+export function push(): typeof webpush {
   if (!configured) {
     const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
     const privateKey = process.env.VAPID_PRIVATE_KEY;
