@@ -32,6 +32,12 @@ export interface Category {
   label: string;
   icon: string;
   hasReportFlow: boolean;
+  // The name the *public scan page* shows for this category — distinct
+  // from the app's own identity (TagPing), which stays constant across
+  // the owner dashboard, PWA install, etc. Lets "pet" keep the original,
+  // familiar PawPing name a finder is more likely to trust/recognize,
+  // while other categories get a name that fits them specifically.
+  brand: string;
   medicalEmergency?: boolean;
   facts?: FieldSpec[];
   copy?: { safe: StatusCopy; missing: StatusCopy };
@@ -61,6 +67,7 @@ export const CATEGORIES: Record<CategoryKey, Category> = {
     label: "Pet",
     icon: "🐈",
     hasReportFlow: true,
+    brand: "PawPing",
     facts: [
       {key: "color", labelKey: "facts.color", source: "field"},
       {key: "age", labelKey: "facts.age", source: "field"},
@@ -74,6 +81,7 @@ export const CATEGORIES: Record<CategoryKey, Category> = {
     label: "Item (keys, bag, bike, electronics...)",
     icon: "🎒",
     hasReportFlow: true,
+    brand: "TagPing",
     facts: [
       {key: "color", labelKey: "facts.color", source: "field"},
       {key: "brand", labelKey: "facts.brand", source: "details"},
@@ -88,6 +96,7 @@ export const CATEGORIES: Record<CategoryKey, Category> = {
     icon: "🏷️",
     hasReportFlow: false,
     medicalEmergency: false,
+    brand: "StayPing",
     infoEyebrowKey: "property.infoEyebrow",
     infoFields: [
       {key: "wifi_network", labelKey: "fields.wifiNetwork"},
@@ -101,6 +110,7 @@ export const CATEGORIES: Record<CategoryKey, Category> = {
     icon: "⛑️",
     hasReportFlow: false,
     medicalEmergency: true,
+    brand: "VitalPing",
     infoEyebrowKey: "medical.infoEyebrow",
     infoFields: [
       {key: "blood_type", labelKey: "fields.bloodType"},

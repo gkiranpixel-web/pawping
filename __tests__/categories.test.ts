@@ -13,6 +13,15 @@ describe("getCategory", () => {
     expect(getCategory("property").hasReportFlow).toBe(false);
   });
 
+  // Each category has its own public-facing brand shown on the scan page —
+  // pet keeps the original PawPing name, the others get one that fits them.
+  it("gives each category its chosen public-facing brand", () => {
+    expect(getCategory("pet").brand).toBe("PawPing");
+    expect(getCategory("item").brand).toBe("TagPing");
+    expect(getCategory("property").brand).toBe("StayPing");
+    expect(getCategory("medical").brand).toBe("VitalPing");
+  });
+
   it("falls back to pet for an unknown or missing key", () => {
     expect(getCategory("dinosaur")).toBe(CATEGORIES.pet);
     expect(getCategory(undefined)).toBe(CATEGORIES.pet);
@@ -32,6 +41,12 @@ describe("categoryList", () => {
 });
 
 describe("category shape", () => {
+  it("gives every category a non-empty public-facing brand name", () => {
+    for (const [key, cat] of Object.entries(CATEGORIES)) {
+      expect(cat.brand?.trim(), `${key}.brand`).toBeTruthy();
+    }
+  });
+
   it("gives every findable category (hasReportFlow: true) facts and safe/missing copy", () => {
     for (const [key, cat] of Object.entries(CATEGORIES)) {
       if (!cat.hasReportFlow) continue;

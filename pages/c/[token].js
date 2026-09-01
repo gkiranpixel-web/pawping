@@ -129,7 +129,7 @@ export default function Item(){
         {result&&<p className="notice">{result}</p>}
         <p className="privacy">{t("ui.privacyNote")}</p>
       </>}
-      {item.is_owner_beta&&registeredSince(item.created_at,locale)&&<p className="trustBadge">{t("ui.registeredSince",{date:registeredSince(item.created_at,locale)})}</p>}
+      {item.is_owner_beta&&registeredSince(item.created_at,locale)&&<p className="trustBadge">{t("ui.registeredSince",{date:registeredSince(item.created_at,locale),brand:category.brand})}</p>}
     </section>
   </main>;
 }
@@ -163,7 +163,7 @@ function InfoPage({item,category,t,locale,setLocale}){
       </div>}
 
       {!fields.length&&!item.health_note&&<p className="muted">{t("ui.noDetails")}</p>}
-      {item.is_owner_beta&&registeredSince(item.created_at,locale)&&<p className="trustBadge">{t("ui.registeredSince",{date:registeredSince(item.created_at,locale)})}</p>}
+      {item.is_owner_beta&&registeredSince(item.created_at,locale)&&<p className="trustBadge">{t("ui.registeredSince",{date:registeredSince(item.created_at,locale),brand:category.brand})}</p>}
     </section>
   </main>;
 }

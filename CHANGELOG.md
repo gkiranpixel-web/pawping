@@ -27,6 +27,18 @@ The version shown in the footer of every page (bottom of the screen) always matc
 `package.json`, so a mismatch between what you see live and what's in this file means
 the latest deploy hasn't gone out yet.
 
+## 0.7.2
+
+- Each category now has its own public-facing brand shown on the scan page, instead
+  of always saying "TagPing": Pet keeps the original **PawPing** name, Item stays
+  **TagPing** (the generic/default), Property/rental is **StayPing**, and Medical ID
+  is **VitalPing**. Only affects the trust badge line a finder sees ("Registered on
+  X since Y") — the app's own identity (dashboard, PWA install, etc.) is unchanged.
+- Added TypeScript (incremental — .js and .ts coexist), a GitHub Actions CI pipeline
+  (type-check, tests, build on every push/PR to main), and a first real automated
+  test suite (Vitest) covering lib/categories.ts and lib/i18n.ts, including a
+  permanent check that every language has the same translation keys as English.
+
 ## 0.7.1
 
 - **PawPing is now TagPing.** The app is expanding beyond pets (see 0.7.0),

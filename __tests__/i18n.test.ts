@@ -18,6 +18,12 @@ describe("makeT", () => {
     expect(t("pet.safe.headline", {name: "Milo"})).toBe("Say hello to Milo!");
   });
 
+  it("interpolates a per-category {brand} into the trust-badge string", () => {
+    const t = makeT("en");
+    expect(t("ui.registeredSince", {date: "January 2026", brand: "StayPing"}))
+      .toBe("✓ Registered on StayPing since January 2026");
+  });
+
   it("falls back to the English string for an unknown locale", () => {
     const t = makeT("zz");
     expect(t("ui.loading")).toBe(STRINGS.en["ui.loading"]);
