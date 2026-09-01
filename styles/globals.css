@@ -20,4 +20,7 @@ button:hover,.linkButton:hover,.primary:hover,.callButton:hover{filter:brightnes
 button:active,.linkButton:active{transform:translateY(1px)}
 button:disabled{opacity:.6;cursor:not-allowed;filter:none}
 @media print{.installBar,header .actions,nav,.toolbar,.noPrint{display:none!important}body{background:white}.poster{box-shadow:none;margin:0;max-width:100%}.tagCut{border-style:dashed}.shell{max-width:none;padding:0}}
-@media(max-width:750px){.wide{padding:15px}.layout,.grid,.mapCard,.poster .posterBody{grid-template-columns:1fr}.poster{padding:22px}.poster h1{font-size:38px}.stats{grid-template-columns:1fr 1fr}h1{font-size:34px}.sectionTitle{align-items:flex-start;flex-direction:column}.filter{width:100%}.mapCard iframe{height:250px}.toolbar{flex-direction:column;align-items:stretch}.search{width:100%}header{flex-wrap:wrap}header .actions{flex-wrap:wrap}header .actions>*{flex:none}}
+@media(max-width:750px){.wide{padding:15px}.layout,.grid,.mapCard,.poster .posterBody{grid-template-columns:1fr}.poster{padding:22px}.poster h1{font-size:38px}.stats{grid-template-columns:1fr 1fr}h1{font-size:34px}.sectionTitle{align-items:flex-start;flex-direction:column}.filter{width:100%}.mapCard iframe{height:250px}.toolbar{flex-direction:column;align-items:stretch}.search{width:100%}header{flex-wrap:wrap}header .actions{flex-wrap:wrap}header .actions>*{flex:none}}.reward{padding:12px;background:#fff7e0;border:1px solid #f3d98b;border-radius:12px;font-weight:bold;color:#7a5a00;margin:10px 0}
+.trustBadge{color:#687970;font-size:12px;margin-top:14px;text-align:center}
+.langRow{display:flex;justify-content:flex-end;margin-bottom:8px}
+.langSwitcher{width:auto;padding:8px 10px;font-size:12px;border-radius:20px}

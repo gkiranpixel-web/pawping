@@ -1,10 +1,35 @@
 import {useRouter} from "next/router";
-import {useEffect,useRef,useState} from "react";
+import {useEffect,useMemo,useRef,useState} from "react";
 import {supabase,ready} from "../../lib/supabase";
 import {getCategory,readField} from "../../lib/categories";
+import {LOCALES,detectLocale,makeT} from "../../lib/i18n";
+
+function registeredSince(iso,locale){
+  if(!iso)return null;
+  return new Date(iso).toLocaleDateString(locale,{year:"numeric",month:"long"});
+}
+
+// A finder scanning this page has no reason to share the owner's
+// language, so it auto-detects the browser's language and falls back to
+// English — with a manual switcher, since auto-detection is a guess, not
+// a guarantee. Owner-side UI (the dashboard, tag/poster printouts) stays
+// English; this is the one page a stranger actually lands on.
+function useLocale(){
+  const [locale,setLocale]=useState("en");
+  useEffect(()=>{setLocale(detectLocale())},[]);
+  const t=useMemo(()=>makeT(locale),[locale]);
+  return {locale,setLocale,t};
+}
+
+function LanguageSwitcher({locale,setLocale}){
+  return <select className="langSwitcher" value={locale} onChange={e=>setLocale(e.target.value)} aria-label="Language">
+    {LOCALES.map(l=><option key={l.code} value={l.code}>{l.label}</option>)}
+  </select>;
+}
 
 export default function Item(){
   const {query}=useRouter();
+  const {locale,setLocale,t}=useLocale();
   const [item,setItem]=useState(null);
   const [loading,setLoading]=useState(true);
   const [notFound,setNotFound]=useState(false);
@@ -30,9 +55,9 @@ export default function Item(){
   },[query.token]);
 
   function submit(){
-    if(!navigator.geolocation){setResult("Location is not supported.");return}
+    if(!navigator.geolocation){setResult(t("ui.locationNotSupported"));return}
     setBusy(true);
-    setResult("Requesting location permission...");
+    setResult(t("ui.requestingLocation"));
     navigator.geolocation.getCurrentPosition(async p=>{
       const res=await fetch("/api/report",{
         method:"POST",
@@ -50,57 +75,60 @@ export default function Item(){
       });
       const json=await res.json().catch(()=>({}));
       setBusy(false);
-      setResult(res.ok?"Thank you. The owner can now see this and has been notified.":(json.error||"Could not send. Please try again."));
+      setResult(res.ok?t("ui.thankYou"):(json.error||t("ui.couldNotSend")));
     },e=>{
       setBusy(false);
-      setResult(`Location not shared: ${e.message}`);
+      setResult(t("ui.locationNotShared",{error:e.message}));
     },{enableHighAccuracy:true,timeout:15000,maximumAge:0});
   }
 
-  if(!ready)return <main className="shell"><section className="card">Setup missing.</section></main>;
-  if(loading)return <main className="shell"><section className="card">Loading...</section></main>;
-  if(notFound)return <main className="shell"><section className="card"><h1>Not found</h1><p className="muted">This link doesn't match anything — double-check the QR code or ask the owner for a fresh one.</p></section></main>;
+  if(!ready)return <main className="shell"><section className="card">{t("ui.setupMissing")}</section></main>;
+  if(loading)return <main className="shell"><section className="card">{t("ui.loading")}</section></main>;
+  if(notFound)return <main className="shell"><section className="card"><h1>{t("ui.notFoundTitle")}</h1><p className="muted">{t("ui.notFoundBody")}</p></section></main>;
 
   const category=getCategory(item.category);
 
-  if(!category.hasReportFlow)return <InfoPage item={item} category={category}/>;
+  if(!category.hasReportFlow)return <InfoPage item={item} category={category} t={t} locale={locale} setLocale={setLocale}/>;
 
   const copy=category.copy[item.status]||category.copy.safe;
 
   return <main className="shell">
+    <div className="langRow"><LanguageSwitcher locale={locale} setLocale={setLocale}/></div>
     <section className={`hero ${item.status}`}>
       {item.photo_url?<img src={item.photo_url} alt={item.name}/>:<span>{category.icon}</span>}
-      <b className={`pill ${item.status}`}>{copy.pill}</b>
+      <b className={`pill ${item.status}`}>{t(copy.pillKey)}</b>
     </section>
     <section className="card joined">
-      <p className="eyebrow">{copy.eyebrow}</p>
-      <h1>{copy.headline(item.name)}</h1>
-      <p className="muted">{item.temperament||"Please approach carefully."}</p>
+      <p className="eyebrow">{t(copy.eyebrowKey)}</p>
+      <h1>{t(copy.headlineKey,{name:item.name})}</h1>
+      <p className="muted">{item.temperament||t("ui.approachCarefully")}</p>
       <div className="facts">
-        {category.facts.map(f=><div key={f.key}><small>{f.label}</small><strong>{readField(item,f)||"Not provided"}</strong></div>)}
+        {category.facts.map(f=><div key={f.key}><small>{t(f.labelKey)}</small><strong>{readField(item,f)||"—"}</strong></div>)}
       </div>
-      {item.health_note&&<p className="notice"><b>Important:</b> {item.health_note}</p>}
-      <p className="tone">{copy.tone}</p>
+      {item.health_note&&<p className="notice"><b>{t("ui.important")}</b> {item.health_note}</p>}
+      {item.details?.reward_note&&<p className="reward">🎁 {item.details.reward_note}</p>}
+      <p className="tone">{t(copy.toneKey)}</p>
 
-      {!showForm&&<button className="secondary block" onClick={()=>setShowForm(true)}>👋 Something seems wrong? Let the owner know</button>}
+      {!showForm&&<button className="secondary block" onClick={()=>setShowForm(true)}>{t("ui.somethingWrong")}</button>}
 
       {showForm&&<>
-        <label>What's the situation?</label>
+        <label>{t("ui.situationLabel")}</label>
         <select value={reportType} onChange={e=>setReportType(e.target.value)}>
-          <option value="saw">I saw it, but it's not with me / I don't have it</option>
-          <option value="have">I have it safe with me right now</option>
+          <option value="saw">{t("ui.reportSaw")}</option>
+          <option value="have">{t("ui.reportHave")}</option>
         </select>
 
-        <label>Message to owner (optional)</label>
-        <textarea value={message} maxLength={500} placeholder="Where did you see it? Anything the owner should know?" onChange={e=>setMessage(e.target.value)}/>
+        <label>{t("ui.messageLabel")}</label>
+        <textarea value={message} maxLength={500} placeholder={t("ui.messagePlaceholder")} onChange={e=>setMessage(e.target.value)}/>
 
         {/* Honeypot — invisible to real visitors, most scripted form-fillers grab it anyway. */}
         <input className="hp" type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" value={hp} onChange={e=>setHp(e.target.value)}/>
 
-        <button disabled={busy} onClick={submit}>{busy?"Getting location...":"📍 Send this to the owner"}</button>
+        <button disabled={busy} onClick={submit}>{busy?t("ui.gettingLocation"):t("ui.sendButton")}</button>
         {result&&<p className="notice">{result}</p>}
-        <p className="privacy">Exact location is shared only after permission and is visible only to the owner — never your contact info, and the owner's phone or email is never shown to you either.</p>
+        <p className="privacy">{t("ui.privacyNote")}</p>
       </>}
+      {registeredSince(item.created_at,locale)&&<p className="trustBadge">{t("ui.registeredSince",{date:registeredSince(item.created_at,locale)})}</p>}
     </section>
   </main>;
 }
@@ -111,28 +139,30 @@ export default function Item(){
 // emergency-contact call button: the one deliberate exception to "never
 // show contact info to a finder," because the whole point of a medical ID
 // is that a first responder needs a real number immediately.
-function InfoPage({item,category}){
+function InfoPage({item,category,t,locale,setLocale}){
   const fields=category.infoFields.map(f=>({...f,value:readField(item,f)})).filter(f=>f.value);
   const emergencyName=item.details?.emergency_contact_name;
   const emergencyPhone=item.details?.emergency_contact_phone;
 
   return <main className="shell">
+    <div className="langRow"><LanguageSwitcher locale={locale} setLocale={setLocale}/></div>
     <section className={`hero safe`}>
       {item.photo_url?<img src={item.photo_url} alt={item.name}/>:<span>{category.icon}</span>}
     </section>
     <section className="card joined">
-      <p className="eyebrow">{category.infoEyebrow}</p>
-      <h1>{category.infoHeadline(item.name)}</h1>
+      <p className="eyebrow">{t(category.infoEyebrowKey)}</p>
+      <h1>{item.name}</h1>
 
-      {category.medicalEmergency&&emergencyPhone&&<a className="primary block" href={`tel:${emergencyPhone}`}>📞 Call emergency contact{emergencyName?` — ${emergencyName}`:""}</a>}
+      {category.medicalEmergency&&emergencyPhone&&<a className="primary block" href={`tel:${emergencyPhone}`}>{emergencyName?t("ui.callEmergencyNamed",{name:emergencyName}):t("ui.callEmergency")}</a>}
 
-      {item.health_note&&<p className="notice"><b>Important:</b> {item.health_note}</p>}
+      {item.health_note&&<p className="notice"><b>{t("ui.important")}</b> {item.health_note}</p>}
 
       {fields.length>0&&<div className="facts" style={{gridTemplateColumns:"1fr"}}>
-        {fields.map(f=><div key={f.key}><small>{f.label.toUpperCase()}</small><strong>{f.value}</strong></div>)}
+        {fields.map(f=><div key={f.key}><small>{t(f.labelKey)}</small><strong>{f.value}</strong></div>)}
       </div>}
 
-      {!fields.length&&!item.health_note&&<p className="muted">No additional details have been added yet.</p>}
+      {!fields.length&&!item.health_note&&<p className="muted">{t("ui.noDetails")}</p>}
+      {registeredSince(item.created_at,locale)&&<p className="trustBadge">{t("ui.registeredSince",{date:registeredSince(item.created_at,locale)})}</p>}
     </section>
   </main>;
 }

@@ -27,6 +27,7 @@ export default function Owner(){
   const [selected,setSelected]=useState(null);
   const [filter,setFilter]=useState("all");
   const [showUnresolvedOnly,setShowUnresolvedOnly]=useState(false);
+  const [categoryFilter,setCategoryFilter]=useState("all");
   const [notif,setNotif]=useState("checking");
  
   useEffect(()=>{
@@ -178,6 +179,7 @@ export default function Owner(){
     load();
   }
  
+  const shownPets=useMemo(()=>categoryFilter==="all"?pets:pets.filter(p=>p.category===categoryFilter),[pets,categoryFilter]);
   const byFilter=useMemo(()=>filter==="all"?reports:reports.filter(r=>r.cat_id===filter),[reports,filter]);
   const shown=useMemo(()=>showUnresolvedOnly?byFilter.filter(r=>!r.resolved_at):byFilter,[byFilter,showUnresolvedOnly]);
   const unresolvedCount=useMemo(()=>reports.filter(r=>!r.resolved_at).length,[reports]);
@@ -227,7 +229,13 @@ export default function Owner(){
           <div className="checklistItem"><span className="checklistNum">2</span><div className="checklistBody"><b>Then: download the QR tag</b><span>Print it and attach it to a collar tag or clip.</span></div></div>
           <div className="checklistItem"><span className="checklistNum">3</span><div className="checklistBody"><b>Then: turn on sighting alerts</b><span>So you find out the moment someone scans it.</span></div></div>
         </div>}
-        <div className="grid">{pets.map(p=>{
+        {pets.length>0&&<div className="actions" style={{marginBottom:12}}>
+          <select className="filter" value={categoryFilter} onChange={e=>setCategoryFilter(e.target.value)}>
+            <option value="all">All categories</option>
+            {categoryList().map(c=><option key={c.value} value={c.value}>{c.label}</option>)}
+          </select>
+        </div>}
+        <div className="grid">{shownPets.map(p=>{
           const url=location.origin+"/c/"+p.public_token;
           return <article className="card" key={p.id}>
             <div className="petTitle">{p.photo_url?<img src={p.photo_url} alt=""/>:<span>{getCategory(p.category).icon}</span>}<div><h3>{p.name}</h3><small className={`status ${p.status}`}>{p.status}</small></div></div>
@@ -239,7 +247,8 @@ export default function Owner(){
             <div className="actions"><button className="danger block" onClick={()=>removePet(p)}>Delete pet</button></div>
           </article>;
         })}</div>
-        {!pets.length&&<div className="empty">Add your first pet to get started.</div>}
+        {!pets.length&&<div className="empty">Add your first item to get started.</div>}
+        {pets.length>0&&!shownPets.length&&<div className="empty">No items in this category yet.</div>}
       </section>
  
       <aside className="card">
