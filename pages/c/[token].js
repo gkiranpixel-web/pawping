@@ -113,14 +113,14 @@ export default function Item(){
       {!showForm&&<button className="secondary block" onClick={()=>setShowForm(true)}>{t("ui.somethingWrong")}</button>}
 
       {showForm&&<>
-        <label>{t("ui.situationLabel")}</label>
-        <select value={reportType} onChange={e=>setReportType(e.target.value)}>
+        <label htmlFor="reportType">{t("ui.situationLabel")}</label>
+        <select id="reportType" value={reportType} onChange={e=>setReportType(e.target.value)}>
           <option value="saw">{t("ui.reportSaw")}</option>
           <option value="have">{t("ui.reportHave")}</option>
         </select>
 
-        <label>{t("ui.messageLabel")}</label>
-        <textarea value={message} maxLength={500} placeholder={t("ui.messagePlaceholder")} onChange={e=>setMessage(e.target.value)}/>
+        <label htmlFor="reportMessage">{t("ui.messageLabel")}</label>
+        <textarea id="reportMessage" value={message} maxLength={500} placeholder={t("ui.messagePlaceholder")} onChange={e=>setMessage(e.target.value)}/>
 
         {/* Honeypot — invisible to real visitors, most scripted form-fillers grab it anyway. */}
         <input className="hp" type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" value={hp} onChange={e=>setHp(e.target.value)}/>

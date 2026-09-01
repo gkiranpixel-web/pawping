@@ -99,10 +99,10 @@ export const CATEGORIES: Record<CategoryKey, Category> = {
     brand: "StayPing",
     infoEyebrowKey: "property.infoEyebrow",
     infoFields: [
-      {key: "wifi_network", labelKey: "fields.wifiNetwork"},
-      {key: "wifi_password", labelKey: "fields.wifiPassword"},
-      {key: "checkin_note", labelKey: "fields.checkinNote"},
-      {key: "house_rules_url", labelKey: "fields.houseRules"},
+      {key: "wifi_network", labelKey: "fields.wifiNetwork", source: "details"},
+      {key: "wifi_password", labelKey: "fields.wifiPassword", source: "details"},
+      {key: "checkin_note", labelKey: "fields.checkinNote", source: "details"},
+      {key: "house_rules_url", labelKey: "fields.houseRules", source: "details"},
     ],
   },
   medical: {
@@ -113,10 +113,10 @@ export const CATEGORIES: Record<CategoryKey, Category> = {
     brand: "VitalPing",
     infoEyebrowKey: "medical.infoEyebrow",
     infoFields: [
-      {key: "blood_type", labelKey: "fields.bloodType"},
-      {key: "allergies", labelKey: "fields.allergies"},
-      {key: "medications", labelKey: "fields.medications"},
-      {key: "conditions", labelKey: "fields.conditions"},
+      {key: "blood_type", labelKey: "fields.bloodType", source: "details"},
+      {key: "allergies", labelKey: "fields.allergies", source: "details"},
+      {key: "medications", labelKey: "fields.medications", source: "details"},
+      {key: "conditions", labelKey: "fields.conditions", source: "details"},
     ],
   },
 };

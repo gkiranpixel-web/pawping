@@ -27,6 +27,25 @@ The version shown in the footer of every page (bottom of the screen) always matc
 `package.json`, so a mismatch between what you see live and what's in this file means
 the latest deploy hasn't gone out yet.
 
+## 0.7.4
+
+- **Fixed a real bug found while writing the tests below:** the Medical ID
+  and Property/rental info pages always rendered "No additional details
+  have been added yet." — even when the owner had filled in a blood type,
+  allergies, Wi-Fi password, etc. Those fields are stored in the `details`
+  jsonb column, but the display config was reading them as if they were
+  plain columns, so they silently never showed up. Fixed the category
+  config, and added a permanent test that would have caught it.
+- Added Playwright end-to-end tests covering the two journeys a finder
+  actually goes through: viewing and reporting on a pet, and viewing a
+  Medical ID with its emergency-call button. Every test mocks the network
+  calls, so the suite needs no real Supabase project and no secrets — runs
+  in CI on every push/PR alongside the existing type-check/unit-test/build
+  job.
+- Minor: the report form's "situation" dropdown and message box are now
+  properly linked to their labels (a small accessibility fix, noticed while
+  writing the above tests).
+
 ## 0.7.3
 
 - The owner dashboard title now tracks the category filter above your pet

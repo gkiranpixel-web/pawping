@@ -63,6 +63,23 @@ describe("category shape", () => {
       expect(cat.infoEyebrowKey, `${key}.infoEyebrowKey`).toBeTruthy();
     }
   });
+
+  // Regression test: every owner-editable value for an informational
+  // category (medical, property) is saved into the `details` jsonb column,
+  // never as a top-level cats column (see supabase/migrations/*v13*). An
+  // infoField missing `source: "details"` silently reads a column that
+  // doesn't exist and always renders blank on the public page — that bug
+  // shipped once already (fixed alongside this test) and produced no error,
+  // just an info page that always said "No additional details have been
+  // added yet." regardless of what the owner filled in.
+  it("sources every informational category's infoFields from details, not a bare column", () => {
+    for (const [key, cat] of Object.entries(CATEGORIES)) {
+      if (cat.hasReportFlow) continue;
+      for (const field of cat.infoFields || []) {
+        expect(field.source, `${key}.infoFields.${field.key}.source`).toBe("details");
+      }
+    }
+  });
 });
 
 describe("readField", () => {
