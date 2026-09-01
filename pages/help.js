@@ -20,7 +20,7 @@ export default function Help(){
   return <main className="shell">
     <section className="card center">
       <div className="paw">🏷️</div>
-      <p className="eyebrow">HOW PAWPING WORKS</p>
+      <p className="eyebrow">HOW TAGPING WORKS</p>
       <h1>Help &amp; FAQ</h1>
     </section>
 

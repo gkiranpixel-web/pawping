@@ -218,6 +218,7 @@ export default function Owner(){
       <div className="actions">
         {notif==="default"&&<button className="secondary" onClick={enableNotifications}>🔔 Enable alerts</button>}
         {notif==="subscribed"&&<span className="secondary linkButton">🔔 Alerts on</span>}
+        <Link className="secondary linkButton" href="/features">What's new</Link>
         <Link className="secondary linkButton" href="/help">Help</Link>
         <Link className="secondary linkButton" href="/admin">Admin</Link>
         <button className="secondary" onClick={()=>supabase.auth.signOut()}>Sign out</button>

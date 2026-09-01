@@ -10,7 +10,7 @@ export default function Home(){
   return <main className="shell">
     <section className="card center">
       <div className="paw">🏷️</div>
-      <p className="eyebrow">PAWPING</p>
+      <p className="eyebrow">TAGPING</p>
       <h1>Every sighting can lead home.</h1>
       <p className="muted">Secure QR pet profiles, instant finder alerts, and a private dashboard for every pet you own.</p>
       <Link className="primary block" href="/owner">Get started — it's free</Link>
@@ -26,5 +26,7 @@ export default function Home(){
       </div>
       <p className="muted" style={{fontSize:13,marginTop:4}}>Already have a TagPing link from a tag? Scan the QR code on the tag itself — you don't need an account to report a sighting.</p>
     </section>
+
+    <p className="muted center" style={{textAlign:"center",marginTop:16,fontSize:13}}><Link href="/features">See everything TagPing does →</Link></p>
   </main>;
 }

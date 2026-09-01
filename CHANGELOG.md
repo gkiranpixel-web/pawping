@@ -27,6 +27,20 @@ The version shown in the footer of every page (bottom of the screen) always matc
 `package.json`, so a mismatch between what you see live and what's in this file means
 the latest deploy hasn't gone out yet.
 
+## 0.7.7
+
+- Added an in-app features page (`/features`) — a short marketing flyer
+  showing what TagPing does: the four category "brands" (PawPing, TagPing,
+  StayPing, VitalPing) with a one-line pitch each, the platform features
+  that come free with every tag (instant alerts, auto-detected language,
+  privacy-first scan pages, install-to-home-screen), and a clearly marked
+  "Coming soon" section (GPS live tracking) so people know what's built
+  vs. what's next. Linked from the homepage and from the owner dashboard
+  header ("What's new").
+- Fixed two leftover "PAWPING" strings (homepage eyebrow, help page
+  heading) that survived the PawPing → TagPing rename and were still
+  showing the old all-caps brand name.
+
 ## 0.7.6
 
 - Added a staging environment: a second, free Supabase project
