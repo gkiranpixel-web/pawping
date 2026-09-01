@@ -27,6 +27,20 @@ The version shown in the footer of every page (bottom of the screen) always matc
 `package.json`, so a mismatch between what you see live and what's in this file means
 the latest deploy hasn't gone out yet.
 
+## 0.7.6
+
+- Added a staging environment: a second, free Supabase project
+  ("pawping-staging") that's a structural replica of production — same
+  tables, functions, triggers, RLS policies — but with zero real data.
+  Future schema/RLS changes get tried there first. Also fills a
+  documentation gap: supabase/migrations/00000000000000_baseline_snapshot.sql
+  is a full snapshot of the schema that existed before this repo started
+  tracking migrations (v13 onward), captured directly from the live
+  database.
+- No cost: this uses Supabase's standard 2-free-projects-per-org allowance,
+  not paid branching. See supabase/migrations/README.md for how staging
+  connects to Vercel Preview deployments.
+
 ## 0.7.5
 
 - Added Sentry error monitoring (their free "Developer" plan — 5,000
